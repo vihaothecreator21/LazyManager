@@ -1,0 +1,16 @@
+.env
+.env.*
+!.env.example
+
+node_modules/
+vendor/
+dist/
+build/
+
+storage/logs/*.log
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+
+.DS_Store
+Thumbs.db
