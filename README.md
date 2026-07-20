@@ -1,10 +1,10 @@
 # LazyManager
 
-LazyManager is a portfolio MVP for store employee scheduling and inventory workflows.
+LazyManager là MVP portfolio cho bài toán quản lý lịch làm nhân viên và tồn kho cửa hàng.
 
-Current phase: walking skeleton. No business feature is implemented yet.
+Giai đoạn hiện tại: walking skeleton. Chưa có tính năng nghiệp vụ thật.
 
-## Architecture
+## Kiến Trúc
 
 ```text
 Browser
@@ -25,7 +25,7 @@ Inventory Service
 
 ## Containers
 
-Docker Compose starts 6 containers:
+Docker Compose bật 6 containers:
 
 ```text
 gateway
@@ -36,37 +36,37 @@ people-db
 inventory-db
 ```
 
-Only the gateway is exposed to the host by default.
+Mặc định chỉ `gateway` được expose ra máy host.
 
-## Requirements
+## Yêu Cầu
 
 - Docker Desktop
-- Node.js, only if running `frontend` outside Docker
-- PHP/Composer, only if running Laravel services outside Docker
+- Node.js, chỉ cần khi chạy `frontend` ngoài Docker
+- PHP/Composer, chỉ cần khi chạy Laravel services ngoài Docker
 
-For normal local development, Docker Desktop is enough.
+Với workflow local bình thường, chỉ cần Docker Desktop.
 
-## Quick Start
+## Chạy Nhanh
 
-Create local environment file:
+Tạo file môi trường local:
 
 ```powershell
 Copy-Item .env.example .env
 ```
 
-Start the full stack:
+Bật toàn bộ hệ thống:
 
 ```powershell
 docker compose up -d --build
 ```
 
-Open:
+Mở:
 
 ```text
 http://localhost:8080
 ```
 
-The frontend health dashboard should show:
+Trang health dashboard của frontend nên hiển thị:
 
 ```text
 People Service: ready
@@ -75,7 +75,7 @@ Inventory Service: ready
 
 ## Health Checks
 
-Through the gateway:
+Kiểm tra qua gateway:
 
 ```text
 http://localhost:8080/api/people/health
@@ -84,7 +84,7 @@ http://localhost:8080/api/inventory/health
 http://localhost:8080/api/inventory/ready
 ```
 
-Expected readiness response:
+Response readiness mong đợi:
 
 ```json
 {
@@ -94,40 +94,40 @@ Expected readiness response:
 }
 ```
 
-`inventory-service` returns the same shape with its own service name.
+`inventory-service` trả cùng cấu trúc, khác `service`.
 
-## Port 8080 Busy
+## Port 8080 Bị Chiếm
 
-If another project already uses port `8080`, run the gateway on another port:
+Nếu project khác đang dùng port `8080`, chạy gateway bằng port khác:
 
 ```powershell
 $env:GATEWAY_PORT="8081"
 docker compose up -d --build
 ```
 
-Open:
+Mở:
 
 ```text
 http://localhost:8081
 ```
 
-## Stop The Stack
+## Tắt Hệ Thống
 
-Stop containers and keep database volumes:
+Tắt containers và giữ database volumes:
 
 ```powershell
 docker compose down
 ```
 
-Use this after coding or learning sessions to release Docker/WSL memory.
+Dùng lệnh này sau phiên code/học để giải phóng RAM Docker/WSL.
 
-Stop containers and remove database volumes:
+Tắt containers và xóa database volumes:
 
 ```powershell
 docker compose down -v
 ```
 
-Use `-v` only when you intentionally want a clean database reset.
+Chỉ dùng `-v` khi chủ động muốn reset database sạch.
 
 ## Verification
 
@@ -150,32 +150,32 @@ Build images:
 docker compose build
 ```
 
-Run stack:
+Chạy hệ thống:
 
 ```powershell
 docker compose up -d
 ```
 
-Check readiness:
+Kiểm tra readiness:
 
 ```powershell
 Invoke-RestMethod http://localhost:8080/api/people/ready
 Invoke-RestMethod http://localhost:8080/api/inventory/ready
 ```
 
-## MVP Scope
+## Phạm Vi MVP
 
-In scope:
+Trong phạm vi:
 
 - React web app
 - Nginx API Gateway
-- People Service with `people_db`
-- Inventory Service with `inventory_db`
+- People Service với `people_db`
+- Inventory Service với `inventory_db`
 - REST APIs
-- Backend role checks
-- PostgreSQL per service
+- Backend kiểm tra role
+- Mỗi service có PostgreSQL database riêng
 
-Out of scope for the MVP:
+Ngoài phạm vi MVP:
 
 - Redis
 - RabbitMQ
@@ -185,11 +185,10 @@ Out of scope for the MVP:
 - Multi-tenant SaaS
 - Advanced dashboard
 
-## Next Milestones
+## Milestones Tiếp Theo
 
-1. Commit the walking skeleton.
-2. Implement `UC-01` login in People Service.
-3. Add JWT authentication and role checks.
-4. Build Employee Management.
-5. Build Schedule Management.
-6. Build Product, Inventory, Stock Import, Sales, Borrow, Stock Count.
+1. Implement `UC-01` login trong People Service.
+2. Thêm JWT authentication và role checks.
+3. Xây Employee Management.
+4. Xây Schedule Management.
+5. Xây Product, Inventory, Stock Import, Sales, Borrow, Stock Count.
