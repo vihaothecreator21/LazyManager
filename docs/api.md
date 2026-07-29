@@ -40,7 +40,6 @@ POST   /api/people/v1/auth/refresh
 POST   /api/people/v1/auth/logout
 GET    /api/people/v1/employees
 POST   /api/people/v1/employees
-GET    /api/people/v1/employees/{id}
 PUT    /api/people/v1/employees/{id}
 DELETE /api/people/v1/employees/{id}
 GET    /api/people/v1/schedules?week_start=YYYY-MM-DD
@@ -50,6 +49,14 @@ DELETE /api/people/v1/schedules/{id}/assignments/{employeeId}
 ```
 
 Auth dùng cookie HttpOnly. React không lưu JWT trong `localStorage` hoặc memory state.
+
+Employee Management:
+
+- `GET /employees` trả danh sách nhân viên cho `STORE_MANAGER`.
+- `POST /employees` tạo nhân viên mới, yêu cầu CSRF và role `STORE_MANAGER`.
+- `PUT /employees/{id}` cập nhật `name`, `email`, `role`, `status`, `password` tùy chọn.
+- `DELETE /employees/{id}` khóa tài khoản bằng `status = LOCKED`, không xóa row.
+- Response employee chỉ trả `id`, `name`, `email`, `role`, `status`, `created_at`, `updated_at`.
 
 ## API công khai của Inventory Service
 

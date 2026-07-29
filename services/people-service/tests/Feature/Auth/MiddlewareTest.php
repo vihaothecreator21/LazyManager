@@ -157,8 +157,14 @@ final class MiddlewareTest extends TestCase
 
         // Controller stub trả 501 — middleware không chặn
         $this->withValidCsrf()->withUnencryptedCookie('lm_access_token', $token)
-            ->postJson('/api/v1/employees', ['name' => 'Test'])
-            ->assertStatus(501);
+            ->postJson('/api/v1/employees', [
+                'name' => 'Test',
+                'email' => 'created@example.com',
+                'password' => 'password123',
+                'role' => UserRole::Staff->value,
+                'status' => UserStatus::Active->value,
+            ])
+            ->assertCreated();
     }
 
     public function test_manager_put_employees_passes_middleware(): void
@@ -167,7 +173,7 @@ final class MiddlewareTest extends TestCase
 
         $this->withValidCsrf()->withUnencryptedCookie('lm_access_token', $token)
             ->putJson('/api/v1/employees/1', ['name' => 'Test'])
-            ->assertStatus(501);
+            ->assertNotFound();
     }
 
     public function test_manager_delete_employees_passes_middleware(): void
@@ -176,7 +182,7 @@ final class MiddlewareTest extends TestCase
 
         $this->withValidCsrf()->withUnencryptedCookie('lm_access_token', $token)
             ->deleteJson('/api/v1/employees/1')
-            ->assertStatus(501);
+            ->assertNotFound();
     }
 
     // -------------------------------------------------------------------------

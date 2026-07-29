@@ -11,6 +11,7 @@ Route::prefix('v1')->group(function (): void {
 
     Route::middleware('auth.jwt')->group(function (): void {
         Route::get('/auth/me', [AuthController::class, 'me']);
+        Route::get('/employees', [EmployeeController::class, 'index'])->middleware('role.manager');
 
         Route::middleware(['csrf.double_submit', 'role.manager'])->group(function (): void {
             Route::post('/employees', [EmployeeController::class, 'store']);

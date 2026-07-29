@@ -121,7 +121,7 @@ final class AuthController extends Controller
 
     private function unauthorizedRefreshResponse(): JsonResponse
     {
-        return response()->json(['message' => 'Phien dang nhap khong hop le.'], 401)
+        return response()->json(['message' => 'Phiên đăng nhập không hợp lệ.'], 401)
             ->cookie($this->authCookieFactory->forgetAccessToken())
             ->cookie($this->authCookieFactory->forgetRefreshToken())
             ->cookie($this->authCookieFactory->forgetCsrfToken());
@@ -129,7 +129,7 @@ final class AuthController extends Controller
 
     private function unauthorizedSessionResponse(): JsonResponse
     {
-        return response()->json(['message' => 'Phien dang nhap khong hop le.'], 401)
+        return response()->json(['message' => 'Phiên đăng nhập không hợp lệ.'], 401)
             ->cookie($this->authCookieFactory->forgetAccessToken())
             ->cookie($this->authCookieFactory->forgetRefreshToken())
             ->cookie($this->authCookieFactory->forgetCsrfToken());

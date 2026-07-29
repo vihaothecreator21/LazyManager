@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../../../lib/useAuth'
 import { checkService, healthEndpoints } from '../../health/api/healthApi'
 import type { ServiceCheck } from '../../health/types'
@@ -47,6 +48,9 @@ export function DashboardPage() {
           </p>
         </div>
         <div className="actions">
+          <Link className="link-button" to="/employees">
+            Nhân viên
+          </Link>
           <button type="button" onClick={refreshHealth} disabled={isChecking}>
             {isChecking ? 'Đang kiểm tra' : 'Kiểm tra lại'}
           </button>

@@ -43,12 +43,12 @@ function toLoginApiError(err: unknown): LoginApiError {
       message: err.message || getFallbackMessage(status),
     }
   }
-  return { status: 0, message: 'Khong the dang nhap. Vui long thu lai.' }
+  return { status: 0, message: 'Không thể đăng nhập. Vui lòng thử lại.' }
 }
 
 function getFallbackMessage(status: number): string {
-  if (status === 401) return 'Email hoac mat khau khong dung.'
-  if (status === 403) return 'Tai khoan da bi khoa hoac khong co quyen.'
-  if (status === 422) return 'Du lieu dang nhap chua hop le.'
-  return 'Khong the dang nhap. Vui long thu lai.'
+  if (status === 401) return 'Email hoặc mật khẩu không đúng.'
+  if (status === 403) return 'Tài khoản đã bị khóa hoặc không có quyền.'
+  if (status === 422) return 'Dữ liệu đăng nhập chưa hợp lệ.'
+  return 'Không thể đăng nhập. Vui lòng thử lại.'
 }

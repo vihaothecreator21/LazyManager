@@ -28,7 +28,7 @@ export async function apiClient<T>(
 
       clearSessionAndRedirect()
       throw Object.assign(
-        new Error('Phien dang nhap da het han. Vui long dang nhap lai.'),
+        new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'),
         { status: 401 },
       )
     }
