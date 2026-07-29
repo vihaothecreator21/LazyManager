@@ -11,9 +11,12 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 COPY . .
 RUN composer install --no-interaction --prefer-dist --optimize-autoloader
-RUN mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/views bootstrap/cache \
-    && chmod -R 775 storage bootstrap/cache
+RUN printf 'APP_KEY=base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=\n' > .env \
+    && mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/views bootstrap/cache \
+    && chmod -R 775 storage bootstrap/cache \
+    && chmod +x docker-entrypoint.sh
 
 EXPOSE 8000
 
+ENTRYPOINT ["./docker-entrypoint.sh"]
 CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]

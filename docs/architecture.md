@@ -46,11 +46,16 @@ Database: `inventory_db`
 
 ## Xác thực
 
-- People Service phát JWT sau khi đăng nhập.
+- People Service phát access JWT sau khi đăng nhập và set vào cookie HttpOnly `lm_access_token`.
+- People Service phát refresh token opaque, set vào cookie HttpOnly `lm_refresh_token` và chỉ lưu hash trong `people_db`.
 - JWT chứa `sub`, `role`, `iss`, `aud`, `iat` và `exp`.
-- Inventory Service xác thực chữ ký, issuer, audience, thời hạn và role bằng demo secret dùng chung.
+- Inventory Service xác thực access JWT từ cookie bằng chữ ký, issuer, audience, thời hạn và role bằng demo secret dùng chung.
+- Refresh token chỉ thuộc People Service; Inventory Service không đọc hoặc xác minh refresh token.
+- React không lưu JWT trong `localStorage`, không gửi token trong response body và không gắn `Authorization: Bearer`.
+- Refresh token được rotate khi gọi refresh. Logout backend revoke refresh token hash và clear cookies.
+- Cookie auth dùng double-submit CSRF: backend set readable `lm_csrf_token`; frontend gửi lại bằng `X-CSRF-TOKEN` cho state-changing requests; backend so header với cookie.
+- Frontend xử lý `401` bằng refresh-once retry: refresh session một lần, retry request cũ đúng một lần, refresh fail thì clear session và về `/login`.
 - Backend services thực thi quy tắc phân quyền.
-- Logout trong MVP chỉ xử lý ở frontend: React xóa JWT và chuyển về trang đăng nhập.
 
 ## Laravel Runtime trong Docker
 
@@ -67,6 +72,8 @@ Public routes qua Nginx:
 GET  /api/people/health
 GET  /api/people/ready
 POST /api/people/v1/auth/login
+POST /api/people/v1/auth/refresh
+POST /api/people/v1/auth/logout
 GET  /api/people/v1/employees
 
 GET  /api/inventory/health

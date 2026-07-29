@@ -66,7 +66,7 @@ Tài liệu v1.0 đang chứa nhiều phần phù hợp cho một dự án dài 
 
 | **Module** | **Chức năng giữ lại** | **Chức năng bỏ** |
 | --- | --- | --- |
-| Tài khoản & nhân viên | Đăng nhập; xem nhân viên; manager CRUD nhân viên. | Role CRUD, permission builder, refresh-token phức tạp. |
+| Tài khoản & nhân viên | Đăng nhập; refresh phiên; đăng xuất; xem nhân viên; manager CRUD nhân viên. | Role CRUD, permission builder, OAuth/social login. |
 | Lịch làm | Bảng tuần; 2 ca/ngày; tối đa 2 người/ca; thêm/sửa/xóa phân công. | Publish/version, nghỉ phép, đổi ca, attendance. |
 | Sản phẩm | CRUD sản phẩm và SKU theo size; tìm kiếm. | Danh mục cây, màu sắc phức tạp, giá bán. |
 | Tồn kho | Import file mẫu; balance hiện tại; transaction history. | AI mapping, background queue, nhiều kiểu import. |
@@ -80,7 +80,8 @@ Tài liệu v1.0 đang chứa nhiều phần phù hợp cho một dự án dài 
 
 ## 3.1 People Service
 
-- Đăng nhập và phát JWT.
+- Đăng nhập và phát access JWT cookie.
+- Phát refresh token opaque, chỉ lưu hash trong people_db.
 - Lưu user, role, employee.
 - Quản lý lịch tuần, ca sáng, ca chiều và phân công nhân viên.
 - Kiểm tra STORE\_MANAGER khi thêm, sửa hoặc xóa nhân viên.
@@ -95,7 +96,7 @@ Tài liệu v1.0 đang chứa nhiều phần phù hợp cho một dự án dài 
 
 ## 3.3 Cách xác thực giữa hai service
 
-People Service phát JWT sau khi đăng nhập. JWT chứa user\_id và role. Inventory Service kiểm tra chữ ký JWT bằng cùng secret trong môi trường demo. Frontend không quyết định quyền; backend luôn kiểm tra lại role.
+People Service phát access JWT ngắn hạn trong cookie HttpOnly `lm_access_token` sau khi đăng nhập. People Service phát refresh token opaque trong cookie HttpOnly `lm_refresh_token` và chỉ lưu hash trong people_db. JWT chứa user\_id và role. Inventory Service kiểm tra access JWT từ cookie bằng cùng secret trong môi trường demo. Frontend không lưu token, không quyết định quyền; backend luôn kiểm tra lại role.
 
 | **Không dùng RabbitMQ trong tháng đầu**   Hai service chưa có luồng bắt buộc phải giao tiếp bất đồng bộ. REST + JWT là đủ để hoàn thành MVP. Đây vẫn là microservice vì hai service có codebase, API và database riêng. |
 
@@ -159,6 +160,7 @@ People Service phát JWT sau khi đăng nhập. JWT chứa user\_id và role. In
 | **Bảng** | **Mục đích** | **Trường quan trọng** |
 | --- | --- | --- |
 | users | Tài khoản đăng nhập | id, email, password, role, status |
+| refresh_tokens | Refresh token backend | id, user_id, token_hash, expires_at, revoked_at |
 | employees | Hồ sơ nhân viên | id, user\_id nullable, code, full\_name, phone, active |
 | shift\_assignments | Lịch làm | id, work\_date, shift\_type, employee\_id |
 
@@ -219,9 +221,11 @@ People Service phát JWT sau khi đăng nhập. JWT chứa user\_id và role. In
 
 2\. People Service kiểm tra thông tin.
 
-3\. Nếu đúng, hệ thống trả JWT chứa user\_id và role.
+3\. Nếu đúng, People Service set cookie `lm_access_token` chứa access JWT và cookie `lm_refresh_token` chứa refresh token opaque.
 
-4\. React lưu token và chuyển vào trang chính.
+4\. People Service lưu hash refresh token trong database.
+
+5\. React lưu user/session state không nhạy cảm và chuyển vào trang chính.
 
 **Trường hợp lỗi / ngoại lệ**
 
@@ -241,9 +245,11 @@ People Service phát JWT sau khi đăng nhập. JWT chứa user\_id và role. In
 
 1\. Người dùng bấm Đăng xuất.
 
-2\. React xóa JWT khỏi bộ nhớ/local storage.
+2\. React gọi backend logout.
 
-3\. Chuyển về trang đăng nhập.
+3\. People Service revoke refresh token hash và clear auth cookies.
+
+4\. React xóa user/session state và chuyển về trang đăng nhập.
 
 ### UC-03 - Xem nhân viên
 

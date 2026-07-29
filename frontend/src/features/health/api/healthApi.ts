@@ -41,15 +41,15 @@ export async function checkService(endpoint: HealthEndpoint): Promise<ServiceChe
       status: data.status,
       message:
         data.database === 'connected'
-          ? `${data.service} connected to ${endpoint.database}`
-          : `${data.service} cannot reach ${endpoint.database}`,
+          ? `${data.service} đã kết nối ${endpoint.database}`
+          : `${data.service} chưa kết nối được ${endpoint.database}`,
       checkedAt: new Date().toISOString(),
     }
   } catch {
     return {
       ...endpoint,
       status: 'error',
-      message: 'Gateway or service is not reachable',
+      message: 'Gateway hoặc service chưa truy cập được',
       checkedAt: new Date().toISOString(),
     }
   }

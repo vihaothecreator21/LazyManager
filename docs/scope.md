@@ -52,26 +52,27 @@ Hệ thống phải chạy local bằng Docker Compose và demo được các lu
 
 ## Use Cases của MVP
 
-1. Đăng nhập.
-2. Đăng xuất bằng cách xóa JWT trên React.
-3. Xem nhân viên.
-4. Tạo nhân viên.
-5. Cập nhật nhân viên.
-6. Xóa mềm nhân viên.
-7. Xem lịch tuần.
-8. Gán nhân viên vào ca.
-9. Xóa nhân viên khỏi ca.
-10. CRUD sản phẩm và SKU.
-11. Import tồn kho.
-12. Xem tồn kho và lịch sử giao dịch.
-13. Tạo daily sales draft.
-14. Confirm daily sales.
-15. Cancel confirmed daily sales.
-16. Mượn sản phẩm.
-17. Trả sản phẩm đã mượn.
-18. Tạo stock count session.
-19. Export stock count CSV.
-20. Nhập số lượng thực tế và xem variance.
+1. Đăng nhập bằng access JWT cookie và refresh token cookie.
+2. Refresh phiên đăng nhập bằng refresh token hash backend.
+3. Đăng xuất bằng backend revoke refresh token hash và clear cookies.
+4. Xem nhân viên.
+5. Tạo nhân viên.
+6. Cập nhật nhân viên.
+7. Xóa mềm nhân viên.
+8. Xem lịch tuần.
+9. Gán nhân viên vào ca.
+10. Xóa nhân viên khỏi ca.
+11. CRUD sản phẩm và SKU.
+12. Import tồn kho.
+13. Xem tồn kho và lịch sử giao dịch.
+14. Tạo daily sales draft.
+15. Confirm daily sales.
+16. Cancel confirmed daily sales.
+17. Mượn sản phẩm.
+18. Trả sản phẩm đã mượn.
+19. Tạo stock count session.
+20. Export stock count CSV.
+21. Nhập số lượng thực tế và xem variance.
 
 ## Ngoài phạm vi
 

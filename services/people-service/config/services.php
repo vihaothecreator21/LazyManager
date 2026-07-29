@@ -35,4 +35,21 @@ return [
         ],
     ],
 
+    'jwt' => [
+        'secret' => env('JWT_SECRET', 'local-dev-secret-for-lazymanager'),
+        'issuer' => env('JWT_ISSUER', 'lazymanager-people-service'),
+        'audience' => env('JWT_AUDIENCE', 'lazymanager'),
+        'ttl_minutes' => (int) env('JWT_TTL_MINUTES', 15),
+    ],
+
+    'auth_cookies' => [
+        'access_cookie' => env('AUTH_ACCESS_COOKIE', 'lm_access_token'),
+        'refresh_cookie' => env('AUTH_REFRESH_COOKIE', 'lm_refresh_token'),
+        'csrf_cookie' => env('AUTH_CSRF_COOKIE', 'lm_csrf_token'),
+        'access_ttl_minutes' => (int) env('AUTH_ACCESS_TTL_MINUTES', env('JWT_TTL_MINUTES', 15)),
+        'refresh_ttl_minutes' => (int) env('AUTH_REFRESH_TTL_MINUTES', 10080),
+        'secure' => (bool) env('AUTH_COOKIE_SECURE', false),
+        'same_site' => env('AUTH_COOKIE_SAME_SITE', 'lax'),
+    ],
+
 ];

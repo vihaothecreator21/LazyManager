@@ -1,0 +1,21 @@
+<?php
+
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\EmployeeController;
+use Illuminate\Support\Facades\Route;
+
+Route::prefix('v1')->group(function (): void {
+    Route::post('/auth/login', [AuthController::class, 'login']);
+    Route::post('/auth/refresh', [AuthController::class, 'refresh'])->middleware('csrf.double_submit');
+    Route::post('/auth/logout', [AuthController::class, 'logout'])->middleware('csrf.double_submit');
+
+    Route::middleware('auth.jwt')->group(function (): void {
+        Route::get('/auth/me', [AuthController::class, 'me']);
+
+        Route::middleware(['csrf.double_submit', 'role.manager'])->group(function (): void {
+            Route::post('/employees', [EmployeeController::class, 'store']);
+            Route::put('/employees/{id}', [EmployeeController::class, 'update']);
+            Route::delete('/employees/{id}', [EmployeeController::class, 'destroy']);
+        });
+    });
+});

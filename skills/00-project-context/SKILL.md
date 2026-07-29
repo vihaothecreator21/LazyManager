@@ -94,11 +94,17 @@ Inventory Service sở hữu database `inventory_db`.
 
 ### Xác thực
 
-- People Service phát JWT sau khi login thành công.
+- People Service phát access JWT ngắn hạn sau khi login thành công.
+- Access JWT nằm trong cookie HttpOnly `lm_access_token`.
+- Refresh token là opaque random token, nằm trong cookie HttpOnly `lm_refresh_token`.
+- People Service chỉ lưu hash của refresh token trong `people_db`, không lưu raw refresh token.
 - JWT chứa `sub`, `role`, `iss`, `aud`, `iat` và `exp`.
-- Inventory Service xác thực signature, issuer, audience, expiration và role bằng cùng secret trong môi trường demo.
+- Inventory Service xác thực access JWT từ cookie: signature, issuer, audience, expiration và role bằng cùng secret trong môi trường demo.
+- Refresh token chỉ thuộc People Service và được rotate khi refresh.
 - Frontend không quyết định quyền. Backend luôn phải kiểm tra quyền lại.
-- Logout trong MVP chỉ xóa JWT phía React, không có backend logout endpoint.
+- React không lưu JWT trong `localStorage` hoặc memory state và không tự gắn `Authorization: Bearer`.
+- Logout gọi backend để revoke refresh token hash và clear cookies.
+- Cookie auth phải có CSRF protection cho state-changing requests.
 
 ## 5. Vai trò
 

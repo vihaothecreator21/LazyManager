@@ -79,17 +79,27 @@ Quyết định: `employees` dùng Laravel SoftDeletes qua `deleted_at`; không 
 
 Lý do: soft delete giữ lịch sử lịch làm. `users.status` tách riêng kiểm soát đăng nhập bằng `ACTIVE` hoặc `LOCKED`.
 
-## ADR-012: Logout chỉ ở frontend trong MVP
+## ADR-012: Dùng access JWT cookie và refresh token hash backend
 
-Quyết định: UC-02 Logout xóa JWT trong React và chuyển về login. Không tạo backend logout endpoint trong MVP.
+Quyết định: dùng phương án B cho auth:
 
-Lý do: JWT là stateless và MVP không dùng Redis hoặc token blacklist tables.
+- Access JWT ngắn hạn nằm trong cookie HttpOnly `lm_access_token`.
+- Refresh token là opaque random token nằm trong cookie HttpOnly `lm_refresh_token`.
+- People Service chỉ lưu hash của refresh token trong `people_db`.
+- Refresh token được rotate khi refresh.
+- Logout là backend endpoint, revoke refresh token hash và clear cookies.
+- React không lưu JWT trong `localStorage` hoặc memory state và không tự gắn `Authorization: Bearer`.
+- State-changing requests dùng double-submit CSRF: readable cookie `lm_csrf_token` phải khớp header `X-CSRF-TOKEN`.
+- Frontend refresh-once retry: request nhận `401` sẽ refresh session một lần, retry request cũ đúng một lần, rồi clear session và chuyển về `/login` nếu vẫn lỗi.
+- Inventory Service đọc `lm_access_token` cookie, xác minh cùng JWT secret/issuer/audience/expiry/role, không hỗ trợ Bearer fallback.
+
+Lý do: cookie HttpOnly giảm rủi ro token bị đọc bởi JavaScript khi có XSS. Refresh token hash backend cho phép logout/revoke thật mà không cần Redis hoặc blacklist toàn bộ access JWT.
 
 ## ADR-013: JWT claims bắt buộc
 
 Quyết định: JWT phải gồm `sub`, `role`, `iss`, `aud`, `iat` và `exp`.
 
-Lý do: Inventory Service có thể xác minh chữ ký, issuer, audience, thời hạn và role mà không gọi People Service.
+Lý do: Inventory Service có thể xác minh access JWT từ cookie bằng chữ ký, issuer, audience, thời hạn và role mà không gọi People Service.
 
 ## ADR-014: IMPORT_SYNC là đồng bộ tuyệt đối
 

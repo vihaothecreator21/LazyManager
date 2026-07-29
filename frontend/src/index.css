@@ -1,26 +1,28 @@
 :root {
-  --bg: #f7f6f2;
-  --surface: #ffffff;
-  --surface-strong: #f1f7f4;
-  --border: #d9ddd7;
-  --text: #353a36;
-  --text-strong: #121512;
-  --muted: #67706a;
-  --button-bg: #1f6b5b;
-  --button-bg-hover: #185648;
-  --button-border: #164f43;
+  --bg: #f4f6f1;
+  --surface: #fbfcf8;
+  --surface-strong: #edf2e8;
+  --surface-inset: #e4eadf;
+  --border: #cfd7ca;
+  --text: #2d342e;
+  --text-strong: #111811;
+  --muted: #5f6a61;
+  --button-bg: #245d45;
+  --button-bg-hover: #1c4c38;
+  --button-border: #17442f;
   --button-text: #ffffff;
-  --success: #168457;
-  --success-bg: #dff4e9;
-  --success-text: #0c5b39;
-  --warning: #b88716;
-  --warning-bg: #faedc8;
-  --warning-text: #6f4d00;
-  --error-bg: #f8dddd;
-  --error-text: #8d2525;
-  --neutral-bg: #e9ece8;
-  --neutral-text: #4c554e;
-  --sans: Inter, ui-sans-serif, system-ui, 'Segoe UI', Roboto, Arial, sans-serif;
+  --success: #247451;
+  --success-bg: #dceee5;
+  --success-text: #135135;
+  --warning: #a2701a;
+  --warning-bg: #f4e6c1;
+  --warning-text: #62450d;
+  --error-bg: #f2dede;
+  --error-text: #842c2c;
+  --neutral-bg: #e5e9e1;
+  --neutral-text: #4b554d;
+  --shadow: 0 24px 70px rgba(49, 64, 45, 0.13);
+  --sans: ui-sans-serif, system-ui, 'Segoe UI', Roboto, Arial, sans-serif;
   --mono: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
 
   font-family: var(--sans);
@@ -38,8 +40,11 @@
 
 body {
   min-width: 320px;
-  min-height: 100vh;
+  min-height: 100dvh;
   margin: 0;
+  background:
+    linear-gradient(135deg, rgba(36, 93, 69, 0.08), transparent 34%),
+    var(--bg);
 }
 
 h1,
@@ -49,17 +54,21 @@ p {
 }
 
 h1 {
-  margin-bottom: 10px;
+  margin-bottom: 12px;
   color: var(--text-strong);
-  font-size: clamp(36px, 6vw, 56px);
-  line-height: 1;
+  font-size: clamp(42px, 6vw, 72px);
+  line-height: 0.95;
   letter-spacing: 0;
 }
 
 h2 {
   margin-bottom: 0;
   color: var(--text-strong);
-  font-size: 20px;
-  line-height: 1.2;
+  font-size: 22px;
+  line-height: 1.1;
   letter-spacing: 0;
+}
+
+strong {
+  color: var(--text-strong);
 }

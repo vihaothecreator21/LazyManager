@@ -81,9 +81,12 @@ Không chỉ log lỗi ra console. Người dùng phải thấy trạng thái ph
 
 - Base URL phải đi qua Nginx.
 - Không gọi thẳng port service như `localhost:8001` hoặc `localhost:8002` từ React.
-- Token được gắn bằng interceptor.
+- Token nằm trong cookie HttpOnly do backend set; React không đọc token.
+- HTTP client bật credentials khi gọi API cần cookie.
 - `401` chuyển về login.
 - `403` hiển thị thông báo không có quyền.
+- Không lưu JWT trong `localStorage`, `sessionStorage` hoặc memory state.
+- Không gắn `Authorization: Bearer` từ React.
 - Không để API logic rải rác trong component.
 - API functions đặt trong `features/<feature-name>/api` hoặc `src/lib` nếu dùng chung.
 - Response và error shape phải được type hóa.

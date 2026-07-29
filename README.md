@@ -187,8 +187,8 @@ Ngoài phạm vi MVP:
 
 ## Milestones Tiếp Theo
 
-1. Implement `UC-01` login trong People Service.
-2. Thêm JWT authentication và role checks.
+1. Implement `UC-01` login bằng access JWT cookie và refresh token hash backend.
+2. Thêm refresh/logout, cookie auth, CSRF protection và role checks.
 3. Xây Employee Management.
 4. Xây Schedule Management.
 5. Xây Product, Inventory, Stock Import, Sales, Borrow, Stock Count.

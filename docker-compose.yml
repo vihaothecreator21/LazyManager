@@ -44,6 +44,17 @@ services:
       DB_PASSWORD: lazymanager
       QUEUE_CONNECTION: sync
       SESSION_DRIVER: file
+      JWT_SECRET: ${JWT_SECRET:-local-dev-secret-for-lazymanager}
+      JWT_ISSUER: ${JWT_ISSUER:-lazymanager-people-service}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-lazymanager}
+      JWT_TTL_MINUTES: ${JWT_TTL_MINUTES:-15}
+      AUTH_ACCESS_COOKIE: ${AUTH_ACCESS_COOKIE:-lm_access_token}
+      AUTH_REFRESH_COOKIE: ${AUTH_REFRESH_COOKIE:-lm_refresh_token}
+      AUTH_CSRF_COOKIE: ${AUTH_CSRF_COOKIE:-lm_csrf_token}
+      AUTH_ACCESS_TTL_MINUTES: ${AUTH_ACCESS_TTL_MINUTES:-15}
+      AUTH_REFRESH_TTL_MINUTES: ${AUTH_REFRESH_TTL_MINUTES:-10080}
+      AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-false}
+      AUTH_COOKIE_SAME_SITE: ${AUTH_COOKIE_SAME_SITE:-lax}
     depends_on:
       people-db:
         condition: service_healthy
@@ -70,6 +81,12 @@ services:
       DB_PASSWORD: lazymanager
       QUEUE_CONNECTION: sync
       SESSION_DRIVER: file
+      JWT_SECRET: ${JWT_SECRET:-local-dev-secret-for-lazymanager}
+      JWT_ISSUER: ${JWT_ISSUER:-lazymanager-people-service}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-lazymanager}
+      JWT_TTL_MINUTES: ${JWT_TTL_MINUTES:-15}
+      AUTH_ACCESS_COOKIE: ${AUTH_ACCESS_COOKIE:-lm_access_token}
+      AUTH_CSRF_COOKIE: ${AUTH_CSRF_COOKIE:-lm_csrf_token}
     depends_on:
       inventory-db:
         condition: service_healthy

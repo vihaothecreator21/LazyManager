@@ -36,6 +36,8 @@ React chỉ được gọi origin này.
 
 ```text
 POST   /api/people/v1/auth/login
+POST   /api/people/v1/auth/refresh
+POST   /api/people/v1/auth/logout
 GET    /api/people/v1/employees
 POST   /api/people/v1/employees
 GET    /api/people/v1/employees/{id}
@@ -47,7 +49,7 @@ POST   /api/people/v1/schedules/{id}/assignments
 DELETE /api/people/v1/schedules/{id}/assignments/{employeeId}
 ```
 
-MVP không có endpoint logout ở backend. React xóa JWT ở phía client.
+Auth dùng cookie HttpOnly. React không lưu JWT trong `localStorage` hoặc memory state.
 
 ## API công khai của Inventory Service
 
@@ -75,7 +77,16 @@ GET    /api/inventory/v1/stock-counts/{id}/export-csv
 PUT    /api/inventory/v1/stock-counts/{id}/lines
 ```
 
-## Yêu cầu JWT
+## Yêu cầu Auth
+
+Phương án B:
+
+- Access token là JWT ngắn hạn, được set vào cookie HttpOnly `lm_access_token`.
+- Refresh token là opaque random token, được set vào cookie HttpOnly `lm_refresh_token`.
+- People Service chỉ lưu hash của refresh token trong `people_db`, không lưu raw token.
+- Protected APIs đọc access JWT từ cookie, không nhận token từ JSON response và không yêu cầu React gắn `Authorization: Bearer`.
+- Cookie dùng `HttpOnly`, `SameSite=Lax`, `Secure` ở môi trường HTTPS; local Docker có thể tắt `Secure`.
+- State-changing requests phải có CSRF protection phù hợp với cookie auth.
 
 JWT claims:
 
@@ -93,6 +104,64 @@ Inventory Service phải xác thực:
 - Audience.
 - Thời hạn.
 - Role.
+
+## Auth endpoints
+
+`POST /api/people/v1/auth/login`
+
+Request:
+
+```json
+{
+  "email": "manager@example.com",
+  "password": "password"
+}
+```
+
+Response `200` set cookies `lm_access_token`, `lm_refresh_token` và `lm_csrf_token`:
+
+```json
+{
+  "user": {
+    "id": 1,
+    "email": "manager@example.com",
+    "role": "STORE_MANAGER"
+  }
+}
+```
+
+`POST /api/people/v1/auth/refresh`
+
+- Đọc `lm_refresh_token`.
+- Yêu cầu `X-CSRF-TOKEN` trùng với cookie `lm_csrf_token`.
+- Hash raw token từ cookie rồi so với hash đang active trong database.
+- Nếu hợp lệ, rotate refresh token, set lại access/refresh/CSRF cookies và revoke hash cũ.
+- Nếu thiếu, sai, hết hạn hoặc đã revoke, trả `401` và clear cookies.
+
+`POST /api/people/v1/auth/logout`
+
+- Đọc `lm_refresh_token`.
+- Yêu cầu `X-CSRF-TOKEN` trùng với cookie `lm_csrf_token`.
+- Revoke refresh token hash nếu tồn tại.
+- Clear `lm_access_token`, `lm_refresh_token` và `lm_csrf_token`.
+- Trả `204`.
+
+## Cookie auth + CSRF flow
+
+- Login: People Service verifies password, issues access JWT, stores refresh token hash, sets `lm_access_token` HttpOnly, `lm_refresh_token` HttpOnly, and readable `lm_csrf_token`.
+- Protected GET: service reads `lm_access_token` cookie. `Authorization: Bearer` is ignored.
+- Protected POST/PUT/PATCH/DELETE: service reads `lm_access_token`, then verifies double-submit CSRF by comparing `X-CSRF-TOKEN` with `lm_csrf_token`.
+- Refresh: frontend sends cookies plus `X-CSRF-TOKEN`; backend revokes old refresh hash, stores new refresh hash, sets new access/refresh/CSRF cookies.
+- Logout: frontend sends cookies plus `X-CSRF-TOKEN`; backend revokes refresh hash and clears all auth cookies.
+- Frontend retry: first `401` calls `/api/people/v1/auth/refresh`, retries the original request once, then clears session and redirects to `/login` if refresh fails.
+- Inventory compatibility: Inventory Service verifies the same access JWT from `lm_access_token` using shared `JWT_SECRET`, issuer, audience, expiry, and role.
+
+## Phase 3 test checklist
+
+- People auth tests: login cookies, no JSON token, refresh rotate, old refresh fails, logout clears cookies, CSRF missing `419`, Bearer ignored.
+- Inventory auth tests: missing/wrong/expired cookie `401`, manager/staff role read from cookie JWT, CSRF missing `419`, CSRF valid pass.
+- Frontend build: no localStorage JWT, no Authorization/Bearer header, credentials enabled, refresh-once retry path compiled.
+- Gateway smoke: login `200`, CSRF cookie present, refresh `200`, inventory `/api/inventory/v1/auth/me` `200`.
 
 ## Response health
 

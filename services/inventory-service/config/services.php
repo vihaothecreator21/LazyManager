@@ -35,4 +35,15 @@ return [
         ],
     ],
 
+    'jwt' => [
+        'secret' => env('JWT_SECRET', 'local-dev-secret-for-lazymanager'),
+        'issuer' => env('JWT_ISSUER', 'lazymanager-people-service'),
+        'audience' => env('JWT_AUDIENCE', 'lazymanager'),
+    ],
+
+    'auth_cookies' => [
+        'access_cookie' => env('AUTH_ACCESS_COOKIE', 'lm_access_token'),
+        'csrf_cookie' => env('AUTH_CSRF_COOKIE', 'lm_csrf_token'),
+    ],
+
 ];
