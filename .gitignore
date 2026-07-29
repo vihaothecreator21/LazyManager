@@ -6,6 +6,7 @@ node_modules/
 vendor/
 dist/
 build/
+.codex/superpowers-src/
 
 storage/logs/*.log
 storage/framework/cache/*
