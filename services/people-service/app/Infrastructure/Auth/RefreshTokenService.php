@@ -31,12 +31,24 @@ final class RefreshTokenService implements RefreshTokenServiceInterface
 
     public function findActiveToken(string $rawToken): ?RefreshToken
     {
+        return $this->activeTokenQuery($rawToken)->first();
+    }
+
+    public function findActiveTokenForUpdate(string $rawToken): ?RefreshToken
+    {
+        return $this->activeTokenQuery($rawToken)->lockForUpdate()->first();
+    }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Builder<RefreshToken>
+     */
+    private function activeTokenQuery(string $rawToken)
+    {
         return RefreshToken::query()
             ->with('user')
             ->where('token_hash', hash('sha256', $rawToken))
             ->whereNull('revoked_at')
-            ->where('expires_at', '>', now())
-            ->first();
+            ->where('expires_at', '>', now());
     }
 
     public function revokeToken(RefreshToken $refreshToken): void

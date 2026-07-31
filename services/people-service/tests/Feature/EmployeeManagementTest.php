@@ -77,6 +77,19 @@ final class EmployeeManagementTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_locked_manager_cannot_list_employees(): void
+    {
+        $manager = $this->createUser(
+            email: 'manager@example.com',
+            role: UserRole::StoreManager,
+            status: UserStatus::Locked,
+        );
+
+        $this->actingAsManager($manager)
+            ->getJson('/api/v1/employees')
+            ->assertUnauthorized();
+    }
+
     public function test_create_employee_requires_csrf(): void
     {
         $manager = $this->createUser(email: 'manager@example.com', role: UserRole::StoreManager);

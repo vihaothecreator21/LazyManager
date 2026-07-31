@@ -5,6 +5,8 @@ type RequestOptions = RequestInit & {
   hasRetriedAfterRefresh?: boolean
 }
 
+let refreshPromise: Promise<boolean> | null = null
+
 export async function apiClient<T>(
   url: string,
   options: RequestOptions = {},
@@ -55,13 +57,18 @@ function fetchWithJsonHeaders(
 }
 
 async function refreshAuthCookies(): Promise<boolean> {
-  const response = await fetch('/api/people/v1/auth/refresh', {
+  refreshPromise ??= fetch('/api/people/v1/auth/refresh', {
     method: 'POST',
     credentials: 'include',
     headers: jsonHeaders({ method: 'POST' }),
-  }).catch(() => null)
+  })
+    .then((response) => response.ok)
+    .catch(() => false)
+    .finally(() => {
+      refreshPromise = null
+    })
 
-  return response?.ok === true
+  return refreshPromise
 }
 
 function jsonHeaders(fetchOptions: RequestInit): HeadersInit {

@@ -12,5 +12,7 @@ interface RefreshTokenServiceInterface
 
     public function findActiveToken(string $rawToken): ?RefreshToken;
 
+    public function findActiveTokenForUpdate(string $rawToken): ?RefreshToken;
+
     public function revokeToken(RefreshToken $refreshToken): void;
 }

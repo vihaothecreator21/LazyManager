@@ -18,10 +18,21 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        $adminEmail = env('ADMIN_EMAIL', 'manager@example.com');
+        $adminPassword = env('ADMIN_PASSWORD');
+
+        if (empty($adminPassword)) {
+            $adminPassword = \Illuminate\Support\Str::random(12);
+            $this->command->warn("ADMIN_PASSWORD is not set. Generating a random one...");
+        }
+
+        $this->command->info("Manager Email: $adminEmail");
+        $this->command->info("Manager Password: $adminPassword");
+
         $demoUsers = [
             [
                 'name' => 'Quản lý demo',
-                'email' => 'manager@example.com',
+                'email' => $adminEmail,
                 'role' => UserRole::StoreManager,
                 'status' => UserStatus::Active,
             ],
@@ -40,11 +51,13 @@ class DatabaseSeeder extends Seeder
         ];
 
         foreach ($demoUsers as $user) {
+            $password = ($user['email'] === $adminEmail) ? $adminPassword : 'password';
+
             User::query()->updateOrCreate(
                 ['email' => $user['email']],
                 [
                     ...$user,
-                    'password' => Hash::make('password'),
+                    'password' => Hash::make($password),
                 ],
             );
         }

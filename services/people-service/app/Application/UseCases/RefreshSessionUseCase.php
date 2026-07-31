@@ -22,21 +22,21 @@ final readonly class RefreshSessionUseCase
      */
     public function execute(string $rawRefreshToken): AuthSession
     {
-        $refreshToken = $this->refreshTokenService->findActiveToken($rawRefreshToken);
+        return DB::transaction(function () use ($rawRefreshToken): AuthSession {
+            $refreshToken = $this->refreshTokenService->findActiveTokenForUpdate($rawRefreshToken);
 
-        if ($refreshToken === null || $refreshToken->user === null) {
-            throw new UnauthorizedException('Phiên đăng nhập không hợp lệ.');
-        }
+            if ($refreshToken === null || $refreshToken->user === null) {
+                throw new UnauthorizedException('Phiên đăng nhập không hợp lệ.');
+            }
 
-        $user = $refreshToken->user;
+            $user = $refreshToken->user;
 
-        if ($user->status === UserStatus::Locked) {
-            $this->refreshTokenService->revokeToken($refreshToken);
+            if ($user->status === UserStatus::Locked) {
+                $this->refreshTokenService->revokeToken($refreshToken);
 
-            throw new UnauthorizedException('Phiên đăng nhập không hợp lệ.');
-        }
+                throw new UnauthorizedException('Phiên đăng nhập không hợp lệ.');
+            }
 
-        return DB::transaction(function () use ($refreshToken, $user): AuthSession {
             $this->refreshTokenService->revokeToken($refreshToken);
             $newRefreshToken = $this->refreshTokenService->issueToken($user);
 

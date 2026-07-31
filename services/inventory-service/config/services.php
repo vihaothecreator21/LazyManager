@@ -36,7 +36,7 @@ return [
     ],
 
     'jwt' => [
-        'secret' => env('JWT_SECRET', 'local-dev-secret-for-lazymanager'),
+        'secret' => env('JWT_SECRET'),
         'issuer' => env('JWT_ISSUER', 'lazymanager-people-service'),
         'audience' => env('JWT_AUDIENCE', 'lazymanager'),
     ],

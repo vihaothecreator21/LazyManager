@@ -2,7 +2,7 @@
 
 LazyManager là MVP portfolio cho bài toán quản lý lịch làm nhân viên và tồn kho cửa hàng.
 
-Giai đoạn hiện tại: walking skeleton. Chưa có tính năng nghiệp vụ thật.
+Giai đoạn hiện tại: đã có walking skeleton, cookie auth, refresh/logout, CSRF, phân quyền cơ bản và Employee Management. Task kế tiếp là Schedule Management.
 
 ## Kiến Trúc
 
@@ -12,7 +12,7 @@ Browser
   | http://localhost:8080
   v
 Nginx API Gateway
-  |-- /                    -> frontend:5173
+  |-- /                    -> frontend:80
   |-- /api/people/*        -> people-service:8000
   |-- /api/inventory/*     -> inventory-service:8000
 
@@ -54,6 +54,14 @@ Tạo file môi trường local:
 Copy-Item .env.example .env
 ```
 
+Điền các biến bắt buộc trong `.env`:
+
+```text
+PEOPLE_APP_KEY=
+INVENTORY_APP_KEY=
+JWT_SECRET=
+```
+
 Bật toàn bộ hệ thống:
 
 ```powershell
@@ -66,12 +74,18 @@ Mở:
 http://localhost:8080
 ```
 
-Trang health dashboard của frontend nên hiển thị:
+## Demo Seeders
+
+Mặc định container không tự seed demo data. Nếu cần tài khoản demo, đặt:
 
 ```text
-People Service: ready
-Inventory Service: ready
+RUN_DEMO_SEEDERS=true
+ADMIN_EMAIL=manager@example.com
+ADMIN_PASSWORD=your-password
 ```
+
+Nếu không đặt `ADMIN_PASSWORD`, seeder sẽ sinh mật khẩu ngẫu nhiên và in ra log container.
+
 
 ## Health Checks
 
@@ -138,6 +152,13 @@ cd frontend
 npm run build
 ```
 
+Chạy backend tests:
+
+```powershell
+docker compose exec -T people-service php artisan test
+docker compose exec -T inventory-service php artisan test
+```
+
 Validate Docker Compose:
 
 ```powershell
@@ -185,10 +206,10 @@ Ngoài phạm vi MVP:
 - Multi-tenant SaaS
 - Advanced dashboard
 
-## Milestones Tiếp Theo
+## Milestones
 
-1. Implement `UC-01` login bằng access JWT cookie và refresh token hash backend.
-2. Thêm refresh/logout, cookie auth, CSRF protection và role checks.
-3. Xây Employee Management.
-4. Xây Schedule Management.
-5. Xây Product, Inventory, Stock Import, Sales, Borrow, Stock Count.
+1. `UC-01`: đăng nhập bằng access JWT cookie và refresh token hash backend. Đã có.
+2. `UC-02`: refresh/logout, cookie auth, CSRF protection và role checks. Đã có.
+3. `UC-03` đến `UC-06`: Employee Management. Đã có.
+4. `UC-07` đến `UC-09`: Schedule Management. Tiếp theo.
+5. `UC-10` trở đi: Product, Inventory, Stock Import, Sales, Borrow, Stock Count.
