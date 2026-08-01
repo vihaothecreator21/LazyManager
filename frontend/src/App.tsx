@@ -1,6 +1,6 @@
 import { Route, Routes } from 'react-router-dom'
 import './App.css'
-import { RequireAuth } from './features/auth/components/RequireAuth'
+import { RequireManager } from './features/auth/components/RequireManager'
 import { LoginPage } from './features/auth/pages/LoginPage'
 import { DashboardPage } from './features/health/pages/DashboardPage'
 import { EmployeesPage } from './features/health/pages/EmployeesPage'
@@ -11,12 +11,12 @@ function App() {
     <Routes>
       {/* Public */}
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/" element={<DashboardPage />} />
+      <Route path="/schedule" element={<ScheduleGridPage />} />
 
-      {/* Protected routes */}
-      <Route element={<RequireAuth />}>
-        <Route path="/" element={<DashboardPage />} />
+      {/* Manager-only routes */}
+      <Route element={<RequireManager />}>
         <Route path="/employees" element={<EmployeesPage />} />
-        <Route path="/schedule" element={<ScheduleGridPage />} />
       </Route>
     </Routes>
   )

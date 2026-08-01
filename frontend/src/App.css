@@ -216,6 +216,14 @@ select:focus {
   padding: 32px 0;
 }
 
+.compact-auth-page {
+  justify-items: center;
+}
+
+.compact-auth-page .login-card {
+  width: min(420px, 100%);
+}
+
 .auth-visual {
   min-height: 260px;
   display: grid;

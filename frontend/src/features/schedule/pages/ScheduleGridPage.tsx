@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useAuth } from '../../../lib/useAuth'
 import { listEmployees, type Employee } from '../../health/api/employeesApi'
 import {
   createShiftAssignment,
@@ -18,7 +17,6 @@ import {
 const initialWeekStart = mondayOf(new Date())
 
 export function ScheduleGridPage() {
-  const { logout } = useAuth()
   const [weekStart, setWeekStart] = useState(initialWeekStart)
   const [schedule, setSchedule] = useState<WeekSchedule | null>(null)
   const [employees, setEmployees] = useState<Employee[]>([])
@@ -136,9 +134,6 @@ export function ScheduleGridPage() {
           <Link className="link-button" to="/employees">
             Nhân viên
           </Link>
-          <button type="button" className="btn-danger" onClick={logout}>
-            Đăng xuất
-          </button>
         </div>
       </section>
 

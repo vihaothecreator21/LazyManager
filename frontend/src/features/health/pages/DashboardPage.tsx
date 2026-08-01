@@ -34,8 +34,6 @@ export function DashboardPage() {
     [checks],
   )
 
-  if (!session) return null
-
   return (
     <main className="shell">
       <section className="overview" aria-labelledby="page-title">
@@ -57,14 +55,16 @@ export function DashboardPage() {
           <button type="button" onClick={refreshHealth} disabled={isChecking}>
             {isChecking ? 'Đang kiểm tra' : 'Kiểm tra lại'}
           </button>
-          <button
-            type="button"
-            id="btn-logout"
-            className="btn-danger"
-            onClick={logout}
-          >
-            Đăng xuất
-          </button>
+          {session ? (
+            <button
+              type="button"
+              id="btn-logout"
+              className="btn-danger"
+              onClick={logout}
+            >
+              Đăng xuất
+            </button>
+          ) : null}
         </div>
       </section>
 
@@ -91,25 +91,27 @@ export function DashboardPage() {
         <span>inventory_db</span>
       </section>
 
-      <section
-        className="session-panel"
-        aria-labelledby="session-title"
-      >
-        <div>
-          <p className="panel-label">Phiên hiện tại</p>
-          <h2 id="session-title">{session.user.email}</h2>
-          <dl className="session-meta">
-            <div>
-              <dt>Role</dt>
-              <dd>{session.user.role}</dd>
-            </div>
-            <div>
-              <dt>Auth</dt>
-              <dd>Cookie HttpOnly</dd>
-            </div>
-          </dl>
-        </div>
-      </section>
+      {session ? (
+        <section
+          className="session-panel"
+          aria-labelledby="session-title"
+        >
+          <div>
+            <p className="panel-label">Phiên hiện tại</p>
+            <h2 id="session-title">{session.user.email}</h2>
+            <dl className="session-meta">
+              <div>
+                <dt>Role</dt>
+                <dd>{session.user.role}</dd>
+              </div>
+              <div>
+                <dt>Auth</dt>
+                <dd>Cookie HttpOnly</dd>
+              </div>
+            </dl>
+          </div>
+        </section>
+      ) : null}
 
       <section className="services" aria-label="Service readiness">
         {checks.map((service) => (
