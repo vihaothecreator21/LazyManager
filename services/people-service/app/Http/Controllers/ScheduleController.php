@@ -83,6 +83,9 @@ final class ScheduleController extends Controller
         $data = $request->validated();
 
         $assignment = DB::transaction(function () use ($data): ShiftAssignment {
+            $this->acquireScheduleLock('schedule-day-employee:'.$data['work_date'].':'.$data['employee_id']);
+            $this->acquireScheduleLock('schedule-shift:'.$data['work_date'].':'.$data['shift_type']);
+
             $isOff = ScheduleDayOff::query()
                 ->where('off_date', $data['work_date'])
                 ->where('employee_id', $data['employee_id'])
@@ -142,6 +145,8 @@ final class ScheduleController extends Controller
         $data = $request->validated();
 
         $dayOff = DB::transaction(function () use ($data): ScheduleDayOff {
+            $this->acquireScheduleLock('schedule-day-employee:'.$data['off_date'].':'.$data['employee_id']);
+
             $hasShift = ShiftAssignment::query()
                 ->where('work_date', $data['off_date'])
                 ->where('employee_id', $data['employee_id'])
@@ -179,6 +184,11 @@ final class ScheduleController extends Controller
         ScheduleDayOff::query()->findOrFail($id)->delete();
 
         return response()->json(null, 204);
+    }
+
+    private function acquireScheduleLock(string $key): void
+    {
+        DB::select('select pg_advisory_xact_lock(hashtext(?))', [$key]);
     }
 
     /**

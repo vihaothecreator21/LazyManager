@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 namespace Tests\Feature\Auth;
 
@@ -281,5 +281,4 @@ final class MiddlewareTest extends TestCase
         return "$h.$p.$sig";
     }
 }
-
 

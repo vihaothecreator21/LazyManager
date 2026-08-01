@@ -6,6 +6,7 @@ use App\Domain\Enums\UserRole;
 use App\Domain\Enums\UserStatus;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
@@ -63,6 +64,30 @@ final class ScheduleManagementTest extends TestCase
             ->assertJsonPath('assignment.shift_type', 'MORNING')
             ->assertJsonPath('assignment.employee.name', 'Vy')
             ->assertJsonPath('assignment.note', 'out 18h');
+    }
+
+    public function test_assigning_employee_uses_database_lock_for_shift_capacity(): void
+    {
+        $manager = $this->createUser('manager@example.com', UserRole::StoreManager);
+        $employee = $this->createUser('vy@example.com', UserRole::Staff, name: 'Vy');
+        $queries = [];
+
+        DB::listen(function ($query) use (&$queries): void {
+            $queries[] = $query->sql;
+        });
+
+        $this->actingWithRole($manager, UserRole::StoreManager)
+            ->withValidCsrf()
+            ->postJson('/api/v1/schedules/assignments', [
+                'work_date' => '2026-07-27',
+                'shift_type' => 'MORNING',
+                'employee_id' => $employee->id,
+            ])
+            ->assertCreated();
+
+        $this->assertTrue(
+            collect($queries)->contains(fn (string $sql): bool => str_contains($sql, 'pg_advisory_xact_lock')),
+        );
     }
 
     public function test_staff_can_assign_employee_to_shift(): void

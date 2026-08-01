@@ -2,12 +2,17 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Application\DTOs\RefreshTokenPair;
+use App\Application\Interfaces\RefreshTokenServiceInterface;
+use App\Application\UseCases\RefreshSessionUseCase;
 use App\Domain\Enums\UserRole;
 use App\Domain\Enums\UserStatus;
 use App\Models\RefreshToken;
 use App\Models\User;
+use DateTimeImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 final class RefreshLogoutTest extends TestCase
@@ -100,6 +105,53 @@ final class RefreshLogoutTest extends TestCase
             ->assertCookieExpired('lm_refresh_token');
 
         $this->assertSame(1, RefreshToken::query()->whereNotNull('revoked_at')->count());
+    }
+
+    public function test_refresh_lookup_holds_database_transaction_lock(): void
+    {
+        $user = $this->createUser();
+        $refreshToken = RefreshToken::query()->create([
+            'user_id' => $user->id,
+            'token_hash' => hash('sha256', 'raw-refresh-token'),
+            'expires_at' => now()->addHour(),
+        ]);
+
+        $baseTransactionLevel = DB::transactionLevel();
+
+        $service = new class($refreshToken, $baseTransactionLevel) implements RefreshTokenServiceInterface {
+            public function __construct(
+                private RefreshToken $refreshToken,
+                private int $baseTransactionLevel,
+            ) {
+            }
+
+            public function issueToken(User $user): RefreshTokenPair
+            {
+                return new RefreshTokenPair('new-refresh-token', new DateTimeImmutable('+1 hour'));
+            }
+
+            public function findActiveToken(string $rawToken): ?RefreshToken
+            {
+                return $this->refreshToken;
+            }
+
+            public function findActiveTokenForUpdate(string $rawToken): ?RefreshToken
+            {
+                TestCase::assertGreaterThan($this->baseTransactionLevel, DB::transactionLevel());
+
+                return $this->refreshToken;
+            }
+
+            public function revokeToken(RefreshToken $refreshToken): void
+            {
+                TestCase::assertGreaterThan($this->baseTransactionLevel, DB::transactionLevel());
+            }
+        };
+
+        /** @var \App\Application\Interfaces\JwtServiceInterface $jwtService */
+        $jwtService = $this->app->make(\App\Application\Interfaces\JwtServiceInterface::class);
+
+        (new RefreshSessionUseCase($jwtService, $service))->execute('raw-refresh-token');
     }
 
     public function test_logout_revokes_refresh_token_and_clears_cookies(): void
