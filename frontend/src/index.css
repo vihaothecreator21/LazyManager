@@ -22,7 +22,7 @@
   --neutral-bg: #e5e9e1;
   --neutral-text: #4b554d;
   --shadow: 0 24px 70px rgba(49, 64, 45, 0.13);
-  --sans: ui-sans-serif, system-ui, 'Segoe UI', Roboto, Arial, sans-serif;
+  --sans: Aptos, 'Segoe UI Variable', ui-sans-serif, system-ui, sans-serif;
   --mono: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
 
   font-family: var(--sans);
@@ -45,6 +45,10 @@ body {
   background:
     linear-gradient(135deg, rgba(36, 93, 69, 0.08), transparent 34%),
     var(--bg);
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 h1,
