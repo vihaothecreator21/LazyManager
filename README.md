@@ -81,10 +81,10 @@ Mặc định container không tự seed demo data. Nếu cần tài khoản dem
 ```text
 RUN_DEMO_SEEDERS=true
 ADMIN_EMAIL=manager@example.com
-ADMIN_PASSWORD=your-password
+ADMIN_PASSWORD=Tangvihao211
 ```
 
-Nếu không đặt `ADMIN_PASSWORD`, seeder sẽ sinh mật khẩu ngẫu nhiên và in ra log container.
+Nếu không đặt `ADMIN_PASSWORD`, seeder sẽ dùng mật khẩu mặc định là `Tangvihao211`.
 
 
 ## Health Checks
@@ -116,7 +116,7 @@ Nếu project khác đang dùng port `8080`, chạy gateway bằng port khác:
 
 ```powershell
 $env:GATEWAY_PORT="8081"
-docker compose up -d --build
+docker compose up -d
 ```
 
 Mở:

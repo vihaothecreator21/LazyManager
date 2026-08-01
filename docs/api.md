@@ -43,9 +43,10 @@ POST   /api/people/v1/employees
 PUT    /api/people/v1/employees/{id}
 DELETE /api/people/v1/employees/{id}
 GET    /api/people/v1/schedules?week_start=YYYY-MM-DD
-POST   /api/people/v1/schedules
-POST   /api/people/v1/schedules/{id}/assignments
-DELETE /api/people/v1/schedules/{id}/assignments/{employeeId}
+POST   /api/people/v1/schedules/assignments
+DELETE /api/people/v1/schedules/assignments/{id}
+POST   /api/people/v1/schedules/day-offs
+DELETE /api/people/v1/schedules/day-offs/{id}
 ```
 
 Auth dùng cookie HttpOnly. React không lưu JWT trong `localStorage` hoặc memory state.

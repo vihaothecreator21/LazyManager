@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace Tests\Feature\Auth;
 
@@ -109,8 +109,8 @@ final class MiddlewareTest extends TestCase
 
     public function test_staff_post_employees_returns_403(): void
     {
-        $this->createUser(role: UserRole::Staff);
-        $token = $this->issueTokenFor(UserRole::Staff);
+        $staff = $this->createUser(role: UserRole::Staff);
+        $token = $this->issueTokenFor(UserRole::Staff, $staff->id);
 
         $this->withValidCsrf()->withUnencryptedCookie('lm_access_token', $token)
             ->postJson('/api/v1/employees', ['name' => 'Test'])
@@ -119,8 +119,8 @@ final class MiddlewareTest extends TestCase
 
     public function test_staff_post_employees_without_csrf_returns_419(): void
     {
-        $this->createUser(role: UserRole::Staff);
-        $token = $this->issueTokenFor(UserRole::Staff);
+        $staff = $this->createUser(role: UserRole::Staff);
+        $token = $this->issueTokenFor(UserRole::Staff, $staff->id);
 
         $this->withCredentials()->withUnencryptedCookie('lm_access_token', $token)
             ->postJson('/api/v1/employees', ['name' => 'Test'])
@@ -129,8 +129,8 @@ final class MiddlewareTest extends TestCase
 
     public function test_staff_put_employees_returns_403(): void
     {
-        $this->createUser(role: UserRole::Staff);
-        $token = $this->issueTokenFor(UserRole::Staff);
+        $staff = $this->createUser(role: UserRole::Staff);
+        $token = $this->issueTokenFor(UserRole::Staff, $staff->id);
 
         $this->withValidCsrf()->withUnencryptedCookie('lm_access_token', $token)
             ->putJson('/api/v1/employees/1', ['name' => 'Test'])
@@ -139,8 +139,8 @@ final class MiddlewareTest extends TestCase
 
     public function test_staff_delete_employees_returns_403(): void
     {
-        $this->createUser(role: UserRole::Staff);
-        $token = $this->issueTokenFor(UserRole::Staff);
+        $staff = $this->createUser(role: UserRole::Staff);
+        $token = $this->issueTokenFor(UserRole::Staff, $staff->id);
 
         $this->withValidCsrf()->withUnencryptedCookie('lm_access_token', $token)
             ->deleteJson('/api/v1/employees/1')
