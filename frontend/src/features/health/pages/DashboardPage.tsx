@@ -51,6 +51,9 @@ export function DashboardPage() {
           <Link className="link-button" to="/employees">
             Nhân viên
           </Link>
+          <Link className="link-button" to="/schedule">
+            Lịch làm việc
+          </Link>
           <button type="button" onClick={refreshHealth} disabled={isChecking}>
             {isChecking ? 'Đang kiểm tra' : 'Kiểm tra lại'}
           </button>

@@ -406,6 +406,221 @@ select:focus {
   background: var(--surface-inset);
 }
 
+.schedule-shell {
+  width: min(1440px, calc(100% - 24px));
+}
+
+.schedule-tools {
+  display: grid;
+  grid-template-columns: minmax(180px, 220px) minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: 14px;
+  align-items: stretch;
+  margin-top: 16px;
+}
+
+.schedule-tools > label,
+.schedule-tools form {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: 0 14px 36px rgba(49, 64, 45, 0.08);
+}
+
+.schedule-tools label {
+  color: var(--text-strong);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.schedule-tools form {
+  grid-template-columns: 90px repeat(4, minmax(120px, 1fr)) auto;
+  align-items: end;
+}
+
+.schedule-tools form strong {
+  align-self: center;
+  white-space: nowrap;
+}
+
+.schedule-tools form button {
+  min-width: 112px;
+}
+
+.schedule-board {
+  margin-top: 16px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: #fffdf2;
+  box-shadow: var(--shadow);
+}
+
+.schedule-board h2 {
+  margin: 0 0 16px;
+  text-align: center;
+}
+
+.schedule-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.schedule-table {
+  min-width: 1180px;
+  display: grid;
+  grid-template-columns: 150px repeat(7, minmax(130px, 1fr));
+  border-radius: 10px;
+  overflow: hidden;
+  color: #2e2b26;
+}
+
+.schedule-head,
+.schedule-side,
+.schedule-cell {
+  min-height: 74px;
+  display: grid;
+  align-content: center;
+  padding: 10px;
+}
+
+.schedule-head {
+  justify-items: center;
+  background: linear-gradient(135deg, #ffd866, #ff9f79);
+  font-weight: 900;
+  text-align: center;
+}
+
+.schedule-head span {
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.schedule-side {
+  justify-items: center;
+  background: #fff7df;
+  font-size: 15px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.schedule-off-side {
+  background: #ffd8eb;
+}
+
+.schedule-cell {
+  gap: 5px;
+  border-left: 2px solid #fff7df;
+  background: #fff6cc;
+}
+
+.schedule-cell.morning {
+  background: #fff2ae;
+}
+
+.schedule-cell.afternoon {
+  background: #6cb8ef;
+}
+
+.schedule-cell.off {
+  min-height: 78px;
+  justify-items: center;
+  background: #ffd1e8;
+}
+
+.shift-card {
+  position: relative;
+  min-height: 47px;
+  display: grid;
+  gap: 3px;
+  align-content: center;
+  padding: 5px 24px 5px 8px;
+  border-radius: 5px;
+  text-align: center;
+}
+
+.schedule-cell.morning .shift-card {
+  background: #fff7c8;
+}
+
+.schedule-cell.afternoon .shift-card {
+  background: #4aa4df;
+  color: #ffffff;
+}
+
+.shift-card strong {
+  color: inherit;
+  font-size: 15px;
+  line-height: 1.1;
+}
+
+.shift-card span {
+  min-height: 20px;
+  display: block;
+  padding: 2px 4px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.88);
+  color: #2e2b26;
+  font-size: 12px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+button.icon-delete {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 18px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.18);
+  color: #ffffff;
+  font-size: 14px;
+  line-height: 1;
+  opacity: 0;
+}
+
+.shift-card:hover button.icon-delete,
+button.icon-delete:focus-visible {
+  opacity: 1;
+}
+
+button.off-name {
+  width: 100%;
+  min-width: 0;
+  height: auto;
+  padding: 4px 6px;
+  border: 0;
+  background: transparent;
+  color: #2e2b26;
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1.25;
+  text-align: center;
+}
+
+button.off-name:hover:not(:disabled) {
+  background: rgba(132, 44, 44, 0.08);
+  transform: none;
+}
+
+.schedule-loading {
+  min-height: 260px;
+  display: grid;
+  place-items: center;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  color: var(--muted);
+  background: var(--surface);
+  font-weight: 800;
+}
+
 .service-card {
   min-height: 250px;
   padding: 22px;
@@ -514,8 +729,14 @@ dd {
   }
 
   .employee-grid,
-  .form-row {
+  .form-row,
+  .schedule-tools,
+  .schedule-tools form {
     grid-template-columns: 1fr;
+  }
+
+  .schedule-board {
+    padding: 10px;
   }
 
   .link-button {

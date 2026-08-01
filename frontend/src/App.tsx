@@ -4,6 +4,7 @@ import { RequireAuth } from './features/auth/components/RequireAuth'
 import { LoginPage } from './features/auth/pages/LoginPage'
 import { DashboardPage } from './features/health/pages/DashboardPage'
 import { EmployeesPage } from './features/health/pages/EmployeesPage'
+import { SchedulePage } from './features/schedule/pages/SchedulePage'
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
       <Route element={<RequireAuth />}>
         <Route path="/" element={<DashboardPage />} />
         <Route path="/employees" element={<EmployeesPage />} />
+        <Route path="/schedule" element={<SchedulePage />} />
       </Route>
     </Routes>
   )
