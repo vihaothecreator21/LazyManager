@@ -85,9 +85,15 @@ final class ScheduleManagementTest extends TestCase
             ])
             ->assertCreated();
 
-        $this->assertTrue(
-            collect($queries)->contains(fn (string $sql): bool => str_contains($sql, 'pg_advisory_xact_lock')),
-        );
+        if (DB::connection()->getDriverName() === 'pgsql') {
+            $this->assertTrue(
+                collect($queries)->contains(fn (string $sql): bool => str_contains($sql, 'pg_advisory_xact_lock')),
+            );
+        } else {
+            $this->assertFalse(
+                collect($queries)->contains(fn (string $sql): bool => str_contains($sql, 'pg_advisory_xact_lock')),
+            );
+        }
     }
 
     public function test_staff_can_assign_employee_to_shift(): void

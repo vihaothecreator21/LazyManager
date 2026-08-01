@@ -23,13 +23,15 @@ final class ScheduleController extends Controller
 
         $assignments = ShiftAssignment::query()
             ->with('employee')
-            ->whereBetween('work_date', [$weekStart->toDateString(), $weekEnd->toDateString()])
+            ->whereDate('work_date', '>=', $weekStart->toDateString())
+            ->whereDate('work_date', '<=', $weekEnd->toDateString())
             ->orderBy('id')
             ->get()
             ->groupBy(fn (ShiftAssignment $assignment): string => $assignment->work_date->toDateString().'|'.$assignment->shift_type->value);
         $dayOffs = ScheduleDayOff::query()
             ->with('employee')
-            ->whereBetween('off_date', [$weekStart->toDateString(), $weekEnd->toDateString()])
+            ->whereDate('off_date', '>=', $weekStart->toDateString())
+            ->whereDate('off_date', '<=', $weekEnd->toDateString())
             ->orderBy('id')
             ->get()
             ->groupBy(fn (ScheduleDayOff $dayOff): string => $dayOff->off_date->toDateString());
@@ -87,7 +89,7 @@ final class ScheduleController extends Controller
             $this->acquireScheduleLock('schedule-shift:'.$data['work_date'].':'.$data['shift_type']);
 
             $isOff = ScheduleDayOff::query()
-                ->where('off_date', $data['work_date'])
+                ->whereDate('off_date', $data['work_date'])
                 ->where('employee_id', $data['employee_id'])
                 ->lockForUpdate()
                 ->exists();
@@ -99,7 +101,7 @@ final class ScheduleController extends Controller
             }
 
             $alreadyAssigned = ShiftAssignment::query()
-                ->where('work_date', $data['work_date'])
+                ->whereDate('work_date', $data['work_date'])
                 ->where('shift_type', $data['shift_type'])
                 ->where('employee_id', $data['employee_id'])
                 ->lockForUpdate()
@@ -112,7 +114,7 @@ final class ScheduleController extends Controller
             }
 
             $existingCount = ShiftAssignment::query()
-                ->where('work_date', $data['work_date'])
+                ->whereDate('work_date', $data['work_date'])
                 ->where('shift_type', $data['shift_type'])
                 ->lockForUpdate()
                 ->get()
@@ -148,7 +150,7 @@ final class ScheduleController extends Controller
             $this->acquireScheduleLock('schedule-day-employee:'.$data['off_date'].':'.$data['employee_id']);
 
             $hasShift = ShiftAssignment::query()
-                ->where('work_date', $data['off_date'])
+                ->whereDate('work_date', $data['off_date'])
                 ->where('employee_id', $data['employee_id'])
                 ->lockForUpdate()
                 ->exists();
@@ -160,7 +162,7 @@ final class ScheduleController extends Controller
             }
 
             $alreadyOff = ScheduleDayOff::query()
-                ->where('off_date', $data['off_date'])
+                ->whereDate('off_date', $data['off_date'])
                 ->where('employee_id', $data['employee_id'])
                 ->lockForUpdate()
                 ->exists();
@@ -188,6 +190,10 @@ final class ScheduleController extends Controller
 
     private function acquireScheduleLock(string $key): void
     {
+        if (DB::connection()->getDriverName() !== 'pgsql') {
+            return;
+        }
+
         DB::select('select pg_advisory_xact_lock(hashtext(?))', [$key]);
     }
 

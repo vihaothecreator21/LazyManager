@@ -463,6 +463,116 @@ select:focus {
   text-align: center;
 }
 
+.schedule-picker {
+  margin-top: 16px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: 0 14px 36px rgba(49, 64, 45, 0.08);
+}
+
+.schedule-picker-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 220px);
+  gap: 16px;
+  align-items: end;
+  margin-bottom: 14px;
+}
+
+.schedule-picker-header label {
+  display: grid;
+  gap: 8px;
+  color: var(--text-strong);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.shift-picker-wrap {
+  overflow-x: auto;
+}
+
+.shift-picker-grid {
+  min-width: 1080px;
+  display: grid;
+  grid-template-columns: 124px repeat(7, minmax(118px, 1fr));
+  gap: 10px;
+}
+
+.day-header {
+  display: grid;
+  gap: 4px;
+  justify-items: center;
+  align-content: center;
+  min-height: 56px;
+  padding: 8px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #ffd866, #ff9f79);
+  color: #4a3f35;
+  font-size: 14px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.day-header span {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.member-name {
+  min-height: 96px;
+  display: grid;
+  place-items: center;
+  padding: 10px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #c3f5c9, #a8e6cf);
+  color: #23513a;
+  font-weight: 900;
+  text-align: center;
+}
+
+.day-cell {
+  display: grid;
+  gap: 5px;
+  align-content: center;
+  min-height: 96px;
+}
+
+.shift-btn {
+  width: 100%;
+  min-width: 0;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text-strong);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.shift-btn:hover:not(:disabled) {
+  border-color: #d59a32;
+  background: #fffbe6;
+}
+
+.shift-btn.morning.selected {
+  border-color: #e6a34a;
+  background: linear-gradient(135deg, #fff1c1, #ffd194);
+}
+
+.shift-btn.afternoon.selected {
+  border-color: #4b9bd1;
+  background: linear-gradient(135deg, #74b9ff, #4aa4df);
+  color: #ffffff;
+}
+
+.shift-btn.off.selected {
+  border-color: #c94f4f;
+  background: linear-gradient(135deg, #ff9a9e, #fecfef);
+  color: #7f2c2c;
+}
+
 .schedule-table-wrap {
   width: 100%;
   overflow-x: auto;
@@ -610,6 +720,17 @@ button.off-name:hover:not(:disabled) {
   transform: none;
 }
 
+.off-name {
+  width: 100%;
+  display: block;
+  padding: 4px 6px;
+  color: #2e2b26;
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1.25;
+  text-align: center;
+}
+
 .schedule-loading {
   min-height: 260px;
   display: grid;
@@ -731,7 +852,8 @@ dd {
   .employee-grid,
   .form-row,
   .schedule-tools,
-  .schedule-tools form {
+  .schedule-tools form,
+  .schedule-picker-header {
     grid-template-columns: 1fr;
   }
 

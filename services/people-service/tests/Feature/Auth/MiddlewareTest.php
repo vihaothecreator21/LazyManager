@@ -133,7 +133,7 @@ final class MiddlewareTest extends TestCase
         $token = $this->issueTokenFor(UserRole::Staff, $staff->id);
 
         $this->withValidCsrf()->withUnencryptedCookie('lm_access_token', $token)
-            ->putJson('/api/v1/employees/1', ['name' => 'Test'])
+            ->putJson('/api/v1/employees/999999', ['name' => 'Test'])
             ->assertForbidden();
     }
 
@@ -143,7 +143,7 @@ final class MiddlewareTest extends TestCase
         $token = $this->issueTokenFor(UserRole::Staff, $staff->id);
 
         $this->withValidCsrf()->withUnencryptedCookie('lm_access_token', $token)
-            ->deleteJson('/api/v1/employees/1')
+            ->deleteJson('/api/v1/employees/999999')
             ->assertForbidden();
     }
 
@@ -172,7 +172,7 @@ final class MiddlewareTest extends TestCase
         $token = $this->issueTokenForManager();
 
         $this->withValidCsrf()->withUnencryptedCookie('lm_access_token', $token)
-            ->putJson('/api/v1/employees/1', ['name' => 'Test'])
+            ->putJson('/api/v1/employees/999999', ['name' => 'Test'])
             ->assertNotFound();
     }
 
@@ -181,7 +181,7 @@ final class MiddlewareTest extends TestCase
         $token = $this->issueTokenForManager();
 
         $this->withValidCsrf()->withUnencryptedCookie('lm_access_token', $token)
-            ->deleteJson('/api/v1/employees/1')
+            ->deleteJson('/api/v1/employees/999999')
             ->assertNotFound();
     }
 

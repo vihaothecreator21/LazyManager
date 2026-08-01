@@ -19,7 +19,7 @@ export function LoginForm({ onLoginSuccess }: LoginFormProps) {
     resolver: zodResolver(loginSchema),
     defaultValues: {
       email: 'manager@example.com',
-      password: 'password',
+      password: '',
     },
   })
 

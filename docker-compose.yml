@@ -54,6 +54,7 @@ services:
       AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-false}
       AUTH_COOKIE_SAME_SITE: ${AUTH_COOKIE_SAME_SITE:-lax}
       RUN_DEMO_SEEDERS: ${RUN_DEMO_SEEDERS:-false}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
     depends_on:
       people-db:
         condition: service_healthy

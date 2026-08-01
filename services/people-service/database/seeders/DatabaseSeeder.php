@@ -53,7 +53,7 @@ class DatabaseSeeder extends Seeder
         foreach ($demoUsers as $user) {
             $password = ($user['email'] === $adminEmail) ? $adminPassword : 'password';
 
-            User::query()->updateOrCreate(
+            User::query()->firstOrCreate(
                 ['email' => $user['email']],
                 [
                     ...$user,
