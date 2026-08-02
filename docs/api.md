@@ -62,7 +62,7 @@ Employee Management:
 ## API công khai của Inventory Service
 
 ```text
-GET    /api/inventory/v1/products
+GET    /api/inventory/v1/products?search=
 POST   /api/inventory/v1/products
 GET    /api/inventory/v1/products/{id}
 PUT    /api/inventory/v1/products/{id}
@@ -70,7 +70,7 @@ DELETE /api/inventory/v1/products/{id}
 POST   /api/inventory/v1/products/{id}/skus
 PUT    /api/inventory/v1/skus/{id}
 DELETE /api/inventory/v1/skus/{id}
-GET    /api/inventory/v1/inventory
+GET    /api/inventory/v1/inventory?search=
 GET    /api/inventory/v1/inventory/{skuId}/transactions
 POST   /api/inventory/v1/stock-imports
 GET    /api/inventory/v1/stock-imports/{id}/preview
@@ -83,6 +83,37 @@ POST   /api/inventory/v1/borrow-records/{id}/return
 POST   /api/inventory/v1/stock-counts
 GET    /api/inventory/v1/stock-counts/{id}/export-csv
 PUT    /api/inventory/v1/stock-counts/{id}/lines
+```
+
+Product/SKU/Inventory MVP:
+
+- `GET /products?search=` trả danh sách sản phẩm kèm SKU và tồn kho hiện tại. Tìm kiếm theo `product_code`, `name` hoặc `sku_code`.
+- `POST /products` tạo sản phẩm, chuẩn hóa `product_code` bằng trim + uppercase.
+- `PUT /products/{id}` cập nhật `product_code` và `name`; không cho cập nhật trực tiếp `active`.
+- `DELETE /products/{id}` ngừng hoạt động sản phẩm, ngừng hoạt động và soft-delete toàn bộ SKU thuộc sản phẩm; giữ nguyên balance và transaction.
+- `POST /products/{id}/skus` tạo SKU, chuẩn hóa `sku_code` bằng trim + uppercase, đồng thời tạo `inventory_balances.quantity = 0`.
+- `PUT /skus/{id}` cập nhật `sku_code` và `size`; không cho cập nhật trực tiếp `active`.
+- `DELETE /skus/{id}` ngừng hoạt động và soft-delete SKU; giữ nguyên balance và transaction.
+- Trùng `product_code` hoặc `sku_code`, kể cả bản ghi đã soft-delete, trả `409`.
+- `GET /inventory?search=` chỉ trả Product/SKU chưa soft-delete, dạng dòng phẳng để xem tồn kho. Tìm kiếm theo `product_code`, `product_name` hoặc `sku_code`.
+- `GET /inventory/{skuId}/transactions` dùng binding có `withTrashed()`, nên vẫn đọc được lịch sử giao dịch của SKU đã soft-delete.
+- Lịch sử giao dịch trả mới nhất trước theo `created_at desc, id desc`.
+- Mutation `POST`, `PUT`, `DELETE` bắt buộc gửi `X-CSRF-TOKEN` khớp cookie `lm_csrf_token`; `GET` không cần CSRF.
+
+Duplicate response:
+
+```json
+{
+  "message": "Mã sản phẩm đã tồn tại."
+}
+```
+
+Inventory business error response:
+
+```json
+{
+  "message": "Tồn kho không đủ để thực hiện thao tác này."
+}
 ```
 
 ## Yêu cầu Auth
