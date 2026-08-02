@@ -1703,7 +1703,207 @@ dd {
   }
 }
 
+/* ─── InventoryPage layout ───────────────────────────────────────── */
+
+/* Content area: table on left, transaction panel on right */
+.inv-content-area {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.inv-content-with-panel {
+  grid-template-columns: minmax(0, 1.15fr) minmax(360px, 0.85fr);
+}
+
+.inv-inv-section {
+  min-width: 0;
+}
+
+/* Inventory table rows */
+.inv-inv-row td {
+  padding-top: 10px;
+  padding-bottom: 10px;
+  font-size: 14px;
+}
+
+.inv-inv-row:hover td {
+  background: rgba(36, 93, 69, 0.03);
+}
+
+.inv-inv-row-selected td {
+  background: rgba(36, 93, 69, 0.06);
+}
+
+/* Quantity cell: larger, right-aligned, tabular nums */
+.inv-qty-cell {
+  font-size: 15px;
+  font-weight: 800;
+}
+
+/* History button active state */
+.inv-history-active {
+  background: rgba(36, 93, 69, 0.12);
+  color: #183f2e;
+  border-color: rgba(36, 93, 69, 0.3);
+}
+
+/* Transaction panel */
+.inv-tx-panel {
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: rgba(251, 252, 248, 0.9);
+  box-shadow: 0 12px 36px rgba(49, 64, 45, 0.07);
+  animation: inv-panel-slide 200ms cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+
+@keyframes inv-panel-slide {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.inv-tx-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 14px;
+}
+
+.inv-tx-panel-info {
+  display: grid;
+  gap: 2px;
+}
+
+.inv-tx-panel-sku {
+  font-size: 15px;
+  font-weight: 900;
+  color: var(--text-strong);
+}
+
+.inv-tx-panel-product {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.inv-tx-close {
+  flex-shrink: 0;
+}
+
+.inv-tx-body {
+  overflow-x: auto;
+}
+
+/* Transaction rows */
+.inv-tx-row td {
+  padding: 9px 10px;
+  font-size: 13px;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.inv-tx-row:hover td {
+  background: rgba(36, 93, 69, 0.03);
+}
+
+/* Quantity change: positive green, negative red */
+.inv-tx-change {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.inv-tx-positive {
+  color: #183f2e;
+}
+
+.inv-tx-negative {
+  color: var(--error-text);
+}
+
+/* Reason / time cells */
+.inv-tx-reason {
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--muted);
+}
+
+.inv-tx-time {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* Transaction type badges */
+.inv-tx-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.inv-tx-import-sync {
+  background: rgba(36, 93, 69, 0.1);
+  color: #183f2e;
+}
+
+.inv-tx-sale {
+  background: rgba(222, 148, 62, 0.15);
+  color: #7a4f1a;
+}
+
+.inv-tx-sale-reversal {
+  background: rgba(200, 200, 200, 0.25);
+  color: var(--muted);
+}
+
+.inv-tx-borrow-out {
+  background: rgba(67, 130, 190, 0.12);
+  color: #264f74;
+}
+
+.inv-tx-borrow-return {
+  background: rgba(67, 130, 190, 0.07);
+  color: #264f74;
+}
+
+/* Reduced motion: disable panel slide */
+@media (prefers-reduced-motion: reduce) {
+  .inv-tx-panel {
+    animation: none;
+  }
+}
+
+/* Mobile: stack everything vertically */
+@media (max-width: 760px) {
+  .inv-content-with-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .inv-tx-panel {
+    padding: 14px;
+  }
+
+  .inv-tx-panel-header {
+    flex-wrap: wrap;
+  }
+}
+
 /* ─── End inventory styles ───────────────────────────────────────── */
+
 
 @media (max-width: 760px) {
   .home-shell {

@@ -30,3 +30,11 @@ assert.doesNotMatch(
 assert.match(dashboard, /to="\/products"/, 'Dashboard nav must have /products link')
 assert.match(dashboard, /to="\/inventory"/, 'Dashboard nav must have /inventory link')
 
+// /inventory route policy: must exist and must NOT be inside RequireManager block
+assert.match(app, /path="\/inventory"/, '/inventory route must exist in App.tsx')
+
+assert.doesNotMatch(
+  requireManagerBlock,
+  /path="\/inventory"/,
+  '/inventory must not be inside RequireManager',
+)
