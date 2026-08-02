@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\AuthenticateJwt;
 use App\Http\Middleware\VerifyDoubleSubmitCsrf;
+use App\Domain\Exceptions\InventoryBusinessException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -24,4 +25,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*'),
         );
+        $exceptions->render(function (InventoryBusinessException $e, Request $request) {
+            if ($request->expectsJson() || $request->is('api/*')) {
+                return response()->json(['message' => $e->getMessage()], $e->status);
+            }
+
+            return null;
+        });
     })->create();
