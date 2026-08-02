@@ -2,6 +2,7 @@
 
 use App\Application\DTOs\VerifiedToken;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\SkuController;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Route;
 
@@ -30,5 +31,8 @@ Route::prefix('v1')->middleware(['auth.jwt', 'csrf.double_submit'])->group(funct
         ]);
     });
 
+    Route::post('/products/{product}/skus', [SkuController::class, 'store']);
+    Route::put('/skus/{sku}', [SkuController::class, 'update']);
+    Route::delete('/skus/{sku}', [SkuController::class, 'destroy']);
     Route::apiResource('products', ProductController::class);
 });
