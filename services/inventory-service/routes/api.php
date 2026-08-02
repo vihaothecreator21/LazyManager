@@ -1,6 +1,7 @@
 <?php
 
 use App\Application\DTOs\VerifiedToken;
+use App\Http\Controllers\ProductController;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Route;
 
@@ -28,4 +29,6 @@ Route::prefix('v1')->middleware(['auth.jwt', 'csrf.double_submit'])->group(funct
             ],
         ]);
     });
+
+    Route::apiResource('products', ProductController::class);
 });
