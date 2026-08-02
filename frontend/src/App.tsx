@@ -4,6 +4,7 @@ import { RequireManager } from './features/auth/components/RequireManager'
 import { LoginPage } from './features/auth/pages/LoginPage'
 import { DashboardPage } from './features/health/pages/DashboardPage'
 import { EmployeesPage } from './features/health/pages/EmployeesPage'
+import { InventoryPage } from './features/inventory/pages/InventoryPage'
 import { ProductsPage } from './features/inventory/pages/ProductsPage'
 import { ScheduleGridPage } from './features/schedule/pages/ScheduleGridPage'
 
@@ -15,6 +16,7 @@ function App() {
       <Route path="/" element={<DashboardPage />} />
       <Route path="/schedule" element={<ScheduleGridPage />} />
       <Route path="/products" element={<ProductsPage />} />
+      <Route path="/inventory" element={<InventoryPage />} />
 
       {/* Manager-only routes */}
       <Route element={<RequireManager />}>
