@@ -88,6 +88,8 @@ export function DashboardPage() {
         </Link>
         <div className="home-nav-links">
           <Link to="/schedule">Lịch làm việc</Link>
+          <Link to="/products">Sản phẩm</Link>
+          <Link to="/inventory">Tồn kho</Link>
           <Link to="/employees">Nhân viên</Link>
           {session ? (
             <button type="button" className="nav-logout" onClick={() => void logout()}>
