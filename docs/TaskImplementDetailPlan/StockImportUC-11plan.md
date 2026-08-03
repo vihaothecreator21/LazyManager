@@ -518,7 +518,7 @@ Safe migrate check passed with: docker compose exec -T inventory-service php art
 - Produces `StockImportLine::stockImport(): BelongsTo`.
 - Produces `StockImportLine::sku(): BelongsTo`.
 
-- [ ] **Step 1: Write failing schema/model test**
+- [x] **Step 1: Write failing schema/model test**
 
 Create `StockImportApiTest.php`:
 
@@ -602,7 +602,7 @@ final class StockImportApiTest extends TestCase
 }
 ```
 
-- [ ] **Step 2: Run failing test**
+- [x] **Step 2: Run failing test**
 
 Run:
 
@@ -612,7 +612,7 @@ docker compose exec -T inventory-service php artisan test --filter=StockImportAp
 
 Expected: FAIL because stock import tables/models do not exist.
 
-- [ ] **Step 3: Create migration**
+- [x] **Step 3: Create migration**
 
 Create migration with:
 
@@ -653,7 +653,7 @@ Schema::dropIfExists('stock_import_lines');
 Schema::dropIfExists('stock_imports');
 ```
 
-- [ ] **Step 4: Create enum and models**
+- [x] **Step 4: Create enum and models**
 
 `StockImportStatus.php`:
 
@@ -715,7 +715,7 @@ public function sku(): BelongsTo
 }
 ```
 
-- [ ] **Step 5: Run schema/model test**
+- [x] **Step 5: Run schema/model test**
 
 Run:
 
@@ -725,7 +725,7 @@ docker compose exec -T inventory-service php artisan test --filter=StockImportAp
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```powershell
 git add services/inventory-service/database/migrations services/inventory-service/app/Domain/Enums/StockImportStatus.php services/inventory-service/app/Models/StockImport.php services/inventory-service/app/Models/StockImportLine.php services/inventory-service/tests/Feature/StockImportApiTest.php
