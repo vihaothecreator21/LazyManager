@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Application\DTOs\CreateStockImportData;
 use App\Application\DTOs\VerifiedToken;
+use App\Application\UseCases\ConfirmStockImportUseCase;
 use App\Application\UseCases\GetStockImportPreviewUseCase;
 use App\Application\UseCases\PreviewStockImportUseCase;
 use App\Http\Requests\StoreStockImportRequest;
@@ -42,6 +43,19 @@ final class StockImportController extends Controller
     ): JsonResponse {
         return response()->json([
             'stock_import' => StockImportResource::make($useCase->execute($stockImport))->resolve($request),
+        ]);
+    }
+
+    public function confirm(
+        StockImport $stockImport,
+        ConfirmStockImportUseCase $useCase,
+        Request $request,
+    ): JsonResponse {
+        /** @var VerifiedToken $verified */
+        $verified = $request->attributes->get('verified_token');
+
+        return response()->json([
+            'stock_import' => StockImportResource::make($useCase->execute($stockImport, $verified->userId))->resolve($request),
         ]);
     }
 }

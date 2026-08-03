@@ -40,5 +40,6 @@ Route::prefix('v1')->middleware(['auth.jwt', 'csrf.double_submit'])->group(funct
     Route::get('/inventory/{sku}/transactions', [InventoryController::class, 'transactions'])->withTrashed();
     Route::post('/stock-imports', [StockImportController::class, 'store']);
     Route::get('/stock-imports/{stockImport}/preview', [StockImportController::class, 'preview']);
+    Route::post('/stock-imports/{stockImport}/confirm', [StockImportController::class, 'confirm']);
     Route::apiResource('products', ProductController::class);
 });

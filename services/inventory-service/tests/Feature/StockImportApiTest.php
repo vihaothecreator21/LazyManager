@@ -250,6 +250,134 @@ final class StockImportApiTest extends InventoryFeatureTestCase
             ->assertJsonPath('stock_import.created_by', 20);
     }
 
+    public function test_confirm_stock_import_synchronizes_balances_and_writes_import_sync_transactions(): void
+    {
+        $sku = $this->createSkuWithBalance(quantity: 5);
+        $stockImport = $this->createPreviewImport($sku, quantity: 12, quantityBefore: 5);
+
+        $this->actingWithInventoryCookie(userId: 10)
+            ->withHeaders($this->authHeaders())
+            ->postJson("/api/v1/stock-imports/{$stockImport->id}/confirm")
+            ->assertOk()
+            ->assertJsonPath('stock_import.status', 'CONFIRMED')
+            ->assertJsonPath('stock_import.confirmed_at', fn ($value): bool => is_string($value));
+
+        $this->assertDatabaseHas('inventory_balances', [
+            'sku_id' => $sku->id,
+            'quantity' => 12,
+        ]);
+        $this->assertDatabaseHas('inventory_transactions', [
+            'sku_id' => $sku->id,
+            'type' => 'IMPORT_SYNC',
+            'quantity_before' => 5,
+            'quantity_change' => 7,
+            'quantity_after' => 12,
+            'reference_type' => 'stock_import',
+            'reference_id' => (string) $stockImport->id,
+            'reason' => 'Đồng bộ tồn kho từ file CSV.',
+            'created_by' => 10,
+        ]);
+    }
+
+    public function test_confirm_writes_import_sync_transaction_when_quantity_does_not_change(): void
+    {
+        $sku = $this->createSkuWithBalance(quantity: 5);
+        $stockImport = $this->createPreviewImport($sku, quantity: 5, quantityBefore: 5);
+
+        $this->actingWithInventoryCookie()
+            ->withHeaders($this->authHeaders())
+            ->postJson("/api/v1/stock-imports/{$stockImport->id}/confirm")
+            ->assertOk();
+
+        $this->assertDatabaseHas('inventory_transactions', [
+            'sku_id' => $sku->id,
+            'type' => 'IMPORT_SYNC',
+            'quantity_before' => 5,
+            'quantity_change' => 0,
+            'quantity_after' => 5,
+            'reference_type' => 'stock_import',
+            'reference_id' => (string) $stockImport->id,
+        ]);
+    }
+
+    public function test_confirm_does_not_mutate_preview_snapshot(): void
+    {
+        $sku = $this->createSkuWithBalance(quantity: 5);
+        $stockImport = $this->createPreviewImport($sku, quantity: 12, quantityBefore: 3);
+        $line = $stockImport->lines()->firstOrFail();
+
+        $this->actingWithInventoryCookie()
+            ->withHeaders($this->authHeaders())
+            ->postJson("/api/v1/stock-imports/{$stockImport->id}/confirm")
+            ->assertOk();
+
+        $line->refresh();
+        self::assertSame(3, $line->quantity_before);
+        self::assertSame(12, $line->quantity_after);
+    }
+
+    public function test_confirm_blocks_import_with_line_errors(): void
+    {
+        $sku = $this->createSkuWithBalance(quantity: 5);
+        $stockImport = $this->createPreviewImport($sku, errorMessage: 'Không tìm thấy SKU.');
+
+        $this->actingWithInventoryCookie()
+            ->withHeaders($this->authHeaders())
+            ->postJson("/api/v1/stock-imports/{$stockImport->id}/confirm")
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'Không thể xác nhận file còn dòng lỗi.');
+
+        $this->assertDatabaseHas('inventory_balances', [
+            'sku_id' => $sku->id,
+            'quantity' => 5,
+        ]);
+    }
+
+    public function test_confirm_cannot_run_twice(): void
+    {
+        $sku = $this->createSkuWithBalance(quantity: 5);
+        $stockImport = $this->createPreviewImport($sku, quantity: 12, quantityBefore: 5);
+
+        $this->actingWithInventoryCookie()
+            ->withHeaders($this->authHeaders())
+            ->postJson("/api/v1/stock-imports/{$stockImport->id}/confirm")
+            ->assertOk();
+
+        $this->actingWithInventoryCookie()
+            ->withHeaders($this->authHeaders())
+            ->postJson("/api/v1/stock-imports/{$stockImport->id}/confirm")
+            ->assertStatus(409)
+            ->assertJsonPath('message', 'File import này đã được xác nhận.');
+    }
+
+    public function test_confirm_requires_csrf(): void
+    {
+        $sku = $this->createSkuWithBalance(quantity: 5);
+        $stockImport = $this->createPreviewImport($sku, quantity: 12, quantityBefore: 5);
+
+        $this->actingWithInventoryCookie()
+            ->postJson("/api/v1/stock-imports/{$stockImport->id}/confirm")
+            ->assertStatus(419);
+    }
+
+    public function test_staff_can_confirm_stock_import(): void
+    {
+        $sku = $this->createSkuWithBalance(quantity: 5);
+        $stockImport = $this->createPreviewImport($sku, quantity: 12, quantityBefore: 5);
+
+        $this->actingWithInventoryCookie(role: 'STAFF', userId: 20)
+            ->withHeaders($this->authHeaders())
+            ->postJson("/api/v1/stock-imports/{$stockImport->id}/confirm")
+            ->assertOk()
+            ->assertJsonPath('stock_import.status', 'CONFIRMED');
+
+        $this->assertDatabaseHas('inventory_transactions', [
+            'sku_id' => $sku->id,
+            'type' => 'IMPORT_SYNC',
+            'created_by' => 20,
+        ]);
+    }
+
     private function csvUpload(string $content, string $name = 'inventory.csv'): UploadedFile
     {
         $path = tempnam(sys_get_temp_dir(), 'stock-import-');
@@ -277,5 +405,33 @@ final class StockImportApiTest extends InventoryFeatureTestCase
         ]);
 
         return $sku;
+    }
+
+    private function createPreviewImport(
+        ProductSku $sku,
+        int $quantity = 12,
+        int $quantityBefore = 5,
+        ?string $errorMessage = null,
+    ): StockImport {
+        $stockImport = StockImport::query()->create([
+            'file_name' => 'inventory.csv',
+            'file_hash' => str_repeat('c', 64),
+            'status' => StockImportStatus::Previewed->value,
+            'created_by' => 10,
+        ]);
+        StockImportLine::query()->create([
+            'stock_import_id' => $stockImport->id,
+            'row_number' => 2,
+            'sku_code' => $sku->sku_code,
+            'raw_sku_code' => $sku->sku_code,
+            'raw_quantity' => (string) $quantity,
+            'sku_id' => $sku->id,
+            'quantity' => $quantity,
+            'quantity_before' => $quantityBefore,
+            'quantity_after' => $quantity,
+            'error_message' => $errorMessage,
+        ]);
+
+        return $stockImport;
     }
 }

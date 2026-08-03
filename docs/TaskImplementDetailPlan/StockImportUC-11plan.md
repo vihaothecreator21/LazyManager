@@ -1208,7 +1208,7 @@ git commit -m "feat(inventory): add stock import preview API"
 - `ConfirmStockImportUseCase::execute(StockImport $stockImport, ?int $createdBy): StockImport`.
 - `StockImportController::confirm(StockImport $stockImport, ConfirmStockImportUseCase $useCase): JsonResponse`.
 
-- [ ] **Step 1: Add failing confirm API tests**
+- [x] **Step 1: Add failing confirm API tests**
 
 Add tests:
 
@@ -1292,7 +1292,7 @@ CSRF assertion:
 ->assertStatus(419);
 ```
 
-- [ ] **Step 2: Run failing confirm tests**
+- [x] **Step 2: Run failing confirm tests**
 
 Run:
 
@@ -1302,7 +1302,7 @@ docker compose exec -T inventory-service php artisan test --filter=confirm
 
 Expected: FAIL because confirm endpoint does not exist.
 
-- [ ] **Step 3: Implement confirm use case**
+- [x] **Step 3: Implement confirm use case**
 
 Behavior:
 
@@ -1336,7 +1336,7 @@ public function __construct(private readonly InventoryBalanceService $balanceSer
 }
 ```
 
-- [ ] **Step 4: Implement controller method and route**
+- [x] **Step 4: Implement controller method and route**
 
 Controller:
 
@@ -1358,7 +1358,7 @@ Route:
 Route::post('/stock-imports/{stockImport}/confirm', [StockImportController::class, 'confirm']);
 ```
 
-- [ ] **Step 5: Run confirm tests**
+- [x] **Step 5: Run confirm tests**
 
 Run:
 
@@ -1368,7 +1368,7 @@ docker compose exec -T inventory-service php artisan test --filter=confirm
 
 Expected: PASS.
 
-- [ ] **Step 6: Run full stock import tests**
+- [x] **Step 6: Run full stock import tests**
 
 Run:
 
@@ -1378,7 +1378,7 @@ docker compose exec -T inventory-service php artisan test --filter=StockImportAp
 
 Expected: PASS.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```powershell
 git add services/inventory-service/app services/inventory-service/routes/api.php services/inventory-service/tests/Feature/StockImportApiTest.php
