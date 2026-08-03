@@ -1405,7 +1405,7 @@ git commit -m "feat(inventory): confirm stock imports"
 - `confirmStockImport(id: number): Promise<StockImport>`.
 - Route: `/inventory/import`.
 
-- [ ] **Step 1: Use frontend design skill**
+- [x] **Step 1: Use frontend design skill**
 
 Run relevant taste/design skill before UI edits:
 
@@ -1424,7 +1424,7 @@ Error rows visually clear but calm.
 Confirm button disabled when preview has errors or already confirmed.
 ```
 
-- [ ] **Step 2: Add frontend route policy test**
+- [x] **Step 2: Add frontend route policy test**
 
 Create `stockImportExperience.test.mjs`:
 
@@ -1440,7 +1440,7 @@ assert.doesNotMatch(app, /<RequireManager>\s*<StockImportPage/)
 console.log('stock import route policy ok')
 ```
 
-- [ ] **Step 3: Create API client**
+- [x] **Step 3: Create API client**
 
 Types:
 
@@ -1492,7 +1492,7 @@ export async function confirmStockImport(id: number): Promise<StockImport> {
 }
 ```
 
-- [ ] **Step 4: Create preview table component**
+- [x] **Step 4: Create preview table component**
 
 Props:
 
@@ -1523,7 +1523,7 @@ Rows with error_message show the message.
 Rows without error show "Hợp lệ".
 ```
 
-- [ ] **Step 5: Create page**
+- [x] **Step 5: Create page**
 
 Required labels:
 
@@ -1553,7 +1553,7 @@ After confirm, replace preview with confirmed response.
 Show API error message from response.message when available.
 ```
 
-- [ ] **Step 6: Add route and navigation**
+- [x] **Step 6: Add route and navigation**
 
 In `App.tsx`:
 
@@ -1575,7 +1575,7 @@ Link URL:
 /inventory/import
 ```
 
-- [ ] **Step 7: Run frontend tests and build**
+- [x] **Step 7: Run frontend tests and build**
 
 Run:
 
@@ -1586,7 +1586,7 @@ npm --prefix frontend run build
 
 Expected: PASS.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```powershell
 git add frontend/src/App.tsx frontend/src/features/inventory frontend/src/features/health/pages/DashboardPage.tsx frontend/src/stockImportExperience.test.mjs

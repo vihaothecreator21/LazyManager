@@ -6,6 +6,7 @@ import { DashboardPage } from './features/health/pages/DashboardPage'
 import { EmployeesPage } from './features/health/pages/EmployeesPage'
 import { InventoryPage } from './features/inventory/pages/InventoryPage'
 import { ProductsPage } from './features/inventory/pages/ProductsPage'
+import { StockImportPage } from './features/inventory/pages/StockImportPage'
 import { ScheduleGridPage } from './features/schedule/pages/ScheduleGridPage'
 
 function App() {
@@ -17,6 +18,7 @@ function App() {
       <Route path="/schedule" element={<ScheduleGridPage />} />
       <Route path="/products" element={<ProductsPage />} />
       <Route path="/inventory" element={<InventoryPage />} />
+      <Route path="/inventory/import" element={<StockImportPage />} />
 
       {/* Manager-only routes */}
       <Route element={<RequireManager />}>

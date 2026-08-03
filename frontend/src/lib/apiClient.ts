@@ -74,8 +74,10 @@ async function refreshAuthCookies(): Promise<boolean> {
 function jsonHeaders(fetchOptions: RequestInit): HeadersInit {
   const headers: Record<string, string> = {
     Accept: 'application/json',
-    'Content-Type': 'application/json',
     ...(fetchOptions.headers as Record<string, string> | undefined),
+  }
+  if (!(fetchOptions.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json'
   }
   const csrfToken = getCookie('lm_csrf_token')
 

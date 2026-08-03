@@ -62,6 +62,7 @@ export function InventoryPage() {
           <Link to="/schedule">Lịch làm việc</Link>
           <Link to="/products">Sản phẩm</Link>
           <Link to="/inventory" aria-current="page">Tồn kho</Link>
+          <Link to="/inventory/import">Nhập tồn kho</Link>
           <Link to="/employees">Nhân viên</Link>
           {session ? (
             <button type="button" className="nav-logout" onClick={() => void logout()}>

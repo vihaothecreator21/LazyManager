@@ -1880,6 +1880,92 @@ dd {
   color: #264f74;
 }
 
+/* Stock import */
+.inv-import-help {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.inv-import-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.inv-import-form {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.inv-import-form label {
+  display: grid;
+  gap: 8px;
+  color: var(--text-strong);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.inv-import-form input[type='file'] {
+  height: auto;
+  min-height: 46px;
+  padding: 10px 12px;
+}
+
+.inv-import-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.inv-import-summary {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.inv-import-summary strong,
+.inv-import-summary span {
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(36, 93, 69, 0.08);
+  color: #183f2e;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.inv-import-summary strong {
+  background: #183f2e;
+  color: #ffffff;
+}
+
+.inv-import-table td {
+  white-space: nowrap;
+}
+
+.inv-import-row-error td {
+  background: rgba(185, 70, 58, 0.04);
+}
+
+.inv-import-error,
+.inv-import-warning {
+  color: var(--error-text);
+  font-weight: 800;
+}
+
+.inv-import-ok,
+.inv-import-success {
+  color: #183f2e;
+  font-weight: 800;
+}
+
 /* Reduced motion: disable panel slide */
 @media (prefers-reduced-motion: reduce) {
   .inv-tx-panel {
@@ -1899,6 +1985,10 @@ dd {
 
   .inv-tx-panel-header {
     flex-wrap: wrap;
+  }
+
+  .inv-import-form {
+    grid-template-columns: 1fr;
   }
 }
 
