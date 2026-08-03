@@ -1,6 +1,6 @@
 # LazyManager
 
-LazyManager là MVP portfolio cho bài toán quản lý lịch làm nhân viên và tồn kho cửa hàng.
+LazyManager là ứng dụng quản lý lịch làm nhân viên và tồn kho cửa hàng.
 
 
 ## Kiến Trúc
