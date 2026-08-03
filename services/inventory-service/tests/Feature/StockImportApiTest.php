@@ -70,4 +70,47 @@ final class StockImportApiTest extends InventoryFeatureTestCase
         self::assertSame('AO-THUN-M', $stockImport->lines()->first()->sku->sku_code);
         self::assertSame(StockImportStatus::Previewed, $stockImport->status);
     }
+
+    public function test_csv_parser_accepts_template_and_normalizes_sku_code(): void
+    {
+        $path = tempnam(sys_get_temp_dir(), 'stock-import-');
+        file_put_contents($path, "sku_code,quantity\n ao-thun-m ,12\n");
+
+        $rows = app(\App\Infrastructure\CsvStockImportParser::class)->parse($path);
+
+        self::assertSame([
+            [
+                'row_number' => 2,
+                'raw_sku_code' => ' ao-thun-m ',
+                'raw_quantity' => '12',
+                'sku_code' => 'AO-THUN-M',
+                'quantity' => 12,
+                'error_message' => null,
+            ],
+        ], $rows);
+    }
+
+    public function test_csv_parser_rejects_wrong_header(): void
+    {
+        $path = tempnam(sys_get_temp_dir(), 'stock-import-');
+        file_put_contents($path, "code,qty\nAO-THUN-M,12\n");
+
+        $this->expectException(\App\Domain\Exceptions\InventoryBusinessException::class);
+        $this->expectExceptionMessage('File CSV phải có đúng hai cột sku_code và quantity.');
+
+        app(\App\Infrastructure\CsvStockImportParser::class)->parse($path);
+    }
+
+    public function test_csv_parser_marks_invalid_quantity_rows(): void
+    {
+        $path = tempnam(sys_get_temp_dir(), 'stock-import-');
+        file_put_contents($path, "sku_code,quantity\nAO-THUN-M,-1\nAO-THUN-L,abc\n");
+
+        $rows = app(\App\Infrastructure\CsvStockImportParser::class)->parse($path);
+
+        self::assertSame('Số lượng không được âm.', $rows[0]['error_message']);
+        self::assertSame('-1', $rows[0]['raw_quantity']);
+        self::assertSame('Số lượng phải là số nguyên.', $rows[1]['error_message']);
+        self::assertSame('abc', $rows[1]['raw_quantity']);
+    }
 }

@@ -747,7 +747,7 @@ git commit -m "feat(inventory): add stock import schema"
 - Returns array rows with keys `row_number`, `raw_sku_code`, `raw_quantity`, `sku_code`, `quantity`, `error_message`.
 - Throws `InventoryBusinessException('File CSV phải có đúng hai cột sku_code và quantity.')` for wrong header.
 
-- [ ] **Step 1: Add failing parser tests**
+- [x] **Step 1: Add failing parser tests**
 
 Add tests:
 
@@ -796,7 +796,7 @@ public function test_csv_parser_marks_invalid_quantity_rows(): void
 }
 ```
 
-- [ ] **Step 2: Run failing parser tests**
+- [x] **Step 2: Run failing parser tests**
 
 Run:
 
@@ -806,7 +806,7 @@ docker compose exec -T inventory-service php artisan test --filter=csv_parser
 
 Expected: FAIL because parser does not exist.
 
-- [ ] **Step 3: Implement parser**
+- [x] **Step 3: Implement parser**
 
 Rules:
 
@@ -884,7 +884,7 @@ public function parse(string $path): array
 }
 ```
 
-- [ ] **Step 4: Run parser tests**
+- [x] **Step 4: Run parser tests**
 
 Run:
 
@@ -894,7 +894,7 @@ docker compose exec -T inventory-service php artisan test --filter=csv_parser
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
 git add services/inventory-service/app/Infrastructure/CsvStockImportParser.php services/inventory-service/tests/Feature/StockImportApiTest.php
