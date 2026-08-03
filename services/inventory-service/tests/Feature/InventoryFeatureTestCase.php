@@ -17,11 +17,11 @@ abstract class InventoryFeatureTestCase extends TestCase
         return ['X-CSRF-TOKEN' => 'inventory-csrf'];
     }
 
-    protected function actingWithInventoryCookie(string $role = 'STORE_MANAGER'): self
+    protected function actingWithInventoryCookie(string $role = 'STORE_MANAGER', int $userId = 1): self
     {
         return $this
             ->withCredentials()
-            ->withUnencryptedCookie('lm_access_token', $this->issueToken(role: $role))
+            ->withUnencryptedCookie('lm_access_token', $this->issueToken(userId: $userId, role: $role))
             ->withUnencryptedCookie('lm_csrf_token', 'inventory-csrf');
     }
 

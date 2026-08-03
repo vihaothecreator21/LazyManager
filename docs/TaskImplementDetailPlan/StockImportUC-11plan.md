@@ -925,7 +925,7 @@ git commit -m "feat(inventory): add stock import csv parser"
 - `StockImportController::store(StoreStockImportRequest $request, PreviewStockImportUseCase $useCase): JsonResponse`.
 - `StockImportController::preview(StockImport $stockImport, GetStockImportPreviewUseCase $useCase): JsonResponse`.
 
-- [ ] **Step 1: Add failing preview API tests**
+- [x] **Step 1: Add failing preview API tests**
 
 Add helper:
 
@@ -996,7 +996,7 @@ Raw value assertion:
 ->assertJsonPath('stock_import.lines.0.error_message', 'Số lượng phải là số nguyên.');
 ```
 
-- [ ] **Step 2: Run failing preview tests**
+- [x] **Step 2: Run failing preview tests**
 
 Run:
 
@@ -1006,7 +1006,7 @@ docker compose exec -T inventory-service php artisan test --filter=preview
 
 Expected: FAIL because API does not exist.
 
-- [ ] **Step 3: Implement request and DTO**
+- [x] **Step 3: Implement request and DTO**
 
 `StoreStockImportRequest`:
 
@@ -1039,7 +1039,7 @@ public function __construct(
 }
 ```
 
-- [ ] **Step 4: Implement preview use cases**
+- [x] **Step 4: Implement preview use cases**
 
 `PreviewStockImportUseCase` behavior:
 
@@ -1109,7 +1109,7 @@ public function execute(StockImport $stockImport): StockImport
 }
 ```
 
-- [ ] **Step 5: Implement resources**
+- [x] **Step 5: Implement resources**
 
 `StockImportLineResource` maps:
 
@@ -1144,7 +1144,7 @@ public function execute(StockImport $stockImport): StockImport
 ]
 ```
 
-- [ ] **Step 6: Implement controller and routes**
+- [x] **Step 6: Implement controller and routes**
 
 Controller:
 
@@ -1175,7 +1175,7 @@ Route::post('/stock-imports', [StockImportController::class, 'store']);
 Route::get('/stock-imports/{stockImport}/preview', [StockImportController::class, 'preview']);
 ```
 
-- [ ] **Step 7: Run preview API tests**
+- [x] **Step 7: Run preview API tests**
 
 Run:
 
@@ -1185,7 +1185,7 @@ docker compose exec -T inventory-service php artisan test --filter=preview
 
 Expected: PASS.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```powershell
 git add services/inventory-service/app services/inventory-service/routes/api.php services/inventory-service/tests/Feature/StockImportApiTest.php

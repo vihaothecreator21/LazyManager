@@ -3,11 +3,13 @@
 namespace Tests\Feature;
 
 use App\Domain\Enums\StockImportStatus;
+use App\Models\InventoryBalance;
 use App\Models\Product;
 use App\Models\ProductSku;
 use App\Models\StockImport;
 use App\Models\StockImportLine;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Http\UploadedFile;
 
 final class StockImportApiTest extends InventoryFeatureTestCase
 {
@@ -112,5 +114,168 @@ final class StockImportApiTest extends InventoryFeatureTestCase
         self::assertSame('-1', $rows[0]['raw_quantity']);
         self::assertSame('Số lượng phải là số nguyên.', $rows[1]['error_message']);
         self::assertSame('abc', $rows[1]['raw_quantity']);
+    }
+
+    public function test_preview_stock_import_creates_import_and_lines(): void
+    {
+        $sku = $this->createSkuWithBalance(quantity: 5);
+
+        $this->actingWithInventoryCookie(userId: 10)
+            ->withHeaders($this->authHeaders())
+            ->post('/api/v1/stock-imports', [
+                'file' => $this->csvUpload("sku_code,quantity\nAO-THUN-M,12\n"),
+            ])
+            ->assertCreated()
+            ->assertJsonPath('stock_import.status', 'PREVIEWED')
+            ->assertJsonPath('stock_import.has_errors', false)
+            ->assertJsonPath('stock_import.created_by', 10)
+            ->assertJsonPath('stock_import.lines.0.sku_code', 'AO-THUN-M')
+            ->assertJsonPath('stock_import.lines.0.sku_id', $sku->id)
+            ->assertJsonPath('stock_import.lines.0.quantity_before', 5)
+            ->assertJsonPath('stock_import.lines.0.quantity_after', 12);
+    }
+
+    public function test_preview_marks_missing_sku_error_by_row(): void
+    {
+        $this->actingWithInventoryCookie()
+            ->withHeaders($this->authHeaders())
+            ->post('/api/v1/stock-imports', [
+                'file' => $this->csvUpload("sku_code,quantity\nSKU-KHONG-CO,4\n"),
+            ])
+            ->assertCreated()
+            ->assertJsonPath('stock_import.has_errors', true)
+            ->assertJsonPath('stock_import.lines.0.error_message', 'Không tìm thấy SKU.');
+    }
+
+    public function test_preview_marks_duplicate_sku_in_same_file(): void
+    {
+        $this->createSkuWithBalance(quantity: 5);
+
+        $this->actingWithInventoryCookie()
+            ->withHeaders($this->authHeaders())
+            ->post('/api/v1/stock-imports', [
+                'file' => $this->csvUpload("sku_code,quantity\nAO-THUN-M,4\nAO-THUN-M,7\n"),
+            ])
+            ->assertCreated()
+            ->assertJsonPath('stock_import.has_errors', true)
+            ->assertJsonPath('stock_import.lines.1.error_message', 'SKU bị lặp trong file.');
+    }
+
+    public function test_preview_rejects_duplicate_file_hash(): void
+    {
+        $this->createSkuWithBalance(quantity: 5);
+        $content = "sku_code,quantity\nAO-THUN-M,12\n";
+
+        $this->actingWithInventoryCookie()
+            ->withHeaders($this->authHeaders())
+            ->post('/api/v1/stock-imports', [
+                'file' => $this->csvUpload($content),
+            ])
+            ->assertCreated();
+
+        $this->actingWithInventoryCookie()
+            ->withHeaders($this->authHeaders())
+            ->post('/api/v1/stock-imports', [
+                'file' => $this->csvUpload($content),
+            ])
+            ->assertStatus(409)
+            ->assertJsonPath('message', 'File này đã được import trước đó.');
+    }
+
+    public function test_preview_preserves_raw_invalid_csv_values(): void
+    {
+        $this->createSkuWithBalance(quantity: 5);
+
+        $this->actingWithInventoryCookie()
+            ->withHeaders($this->authHeaders())
+            ->post('/api/v1/stock-imports', [
+                'file' => $this->csvUpload("sku_code,quantity\n ao-thun-m ,abc\n"),
+            ])
+            ->assertCreated()
+            ->assertJsonPath('stock_import.lines.0.raw_sku_code', ' ao-thun-m ')
+            ->assertJsonPath('stock_import.lines.0.raw_quantity', 'abc')
+            ->assertJsonPath('stock_import.lines.0.quantity', null)
+            ->assertJsonPath('stock_import.lines.0.error_message', 'Số lượng phải là số nguyên.');
+    }
+
+    public function test_preview_marks_inactive_sku_error_by_row(): void
+    {
+        $this->createSkuWithBalance(quantity: 5, active: false);
+
+        $this->actingWithInventoryCookie()
+            ->withHeaders($this->authHeaders())
+            ->post('/api/v1/stock-imports', [
+                'file' => $this->csvUpload("sku_code,quantity\nAO-THUN-M,12\n"),
+            ])
+            ->assertCreated()
+            ->assertJsonPath('stock_import.has_errors', true)
+            ->assertJsonPath('stock_import.lines.0.error_message', 'SKU đã ngừng hoạt động.');
+    }
+
+    public function test_get_preview_does_not_require_csrf(): void
+    {
+        $stockImport = StockImport::query()->create([
+            'file_name' => 'inventory.csv',
+            'file_hash' => str_repeat('b', 64),
+            'status' => StockImportStatus::Previewed->value,
+            'created_by' => 10,
+        ]);
+
+        StockImportLine::query()->create([
+            'stock_import_id' => $stockImport->id,
+            'row_number' => 2,
+            'sku_code' => 'SKU-KHONG-CO',
+            'raw_sku_code' => 'SKU-KHONG-CO',
+            'raw_quantity' => '4',
+            'quantity' => 4,
+            'error_message' => 'Không tìm thấy SKU.',
+        ]);
+
+        $this->actingWithInventoryCookie()
+            ->getJson("/api/v1/stock-imports/{$stockImport->id}/preview")
+            ->assertOk()
+            ->assertJsonPath('stock_import.lines.0.error_message', 'Không tìm thấy SKU.');
+    }
+
+    public function test_staff_can_preview_stock_import(): void
+    {
+        $this->createSkuWithBalance(quantity: 5);
+
+        $this->actingWithInventoryCookie(role: 'STAFF', userId: 20)
+            ->withHeaders($this->authHeaders())
+            ->post('/api/v1/stock-imports', [
+                'file' => $this->csvUpload("sku_code,quantity\nAO-THUN-M,12\n"),
+            ])
+            ->assertCreated()
+            ->assertJsonPath('stock_import.created_by', 20);
+    }
+
+    private function csvUpload(string $content, string $name = 'inventory.csv'): UploadedFile
+    {
+        $path = tempnam(sys_get_temp_dir(), 'stock-import-');
+        file_put_contents($path, $content);
+
+        return new UploadedFile($path, $name, 'text/csv', null, true);
+    }
+
+    private function createSkuWithBalance(int $quantity, bool $active = true): ProductSku
+    {
+        $product = Product::query()->create([
+            'product_code' => 'AO-THUN',
+            'name' => 'Áo thun',
+            'active' => true,
+        ]);
+        $sku = ProductSku::query()->create([
+            'product_id' => $product->id,
+            'sku_code' => 'AO-THUN-M',
+            'size' => 'M',
+            'active' => $active,
+        ]);
+        InventoryBalance::query()->create([
+            'sku_id' => $sku->id,
+            'quantity' => $quantity,
+        ]);
+
+        return $sku;
     }
 }

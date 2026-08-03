@@ -4,6 +4,7 @@ use App\Application\DTOs\VerifiedToken;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\SkuController;
+use App\Http\Controllers\StockImportController;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Route;
 
@@ -37,5 +38,7 @@ Route::prefix('v1')->middleware(['auth.jwt', 'csrf.double_submit'])->group(funct
     Route::delete('/skus/{sku}', [SkuController::class, 'destroy']);
     Route::get('/inventory', [InventoryController::class, 'index']);
     Route::get('/inventory/{sku}/transactions', [InventoryController::class, 'transactions'])->withTrashed();
+    Route::post('/stock-imports', [StockImportController::class, 'store']);
+    Route::get('/stock-imports/{stockImport}/preview', [StockImportController::class, 'preview']);
     Route::apiResource('products', ProductController::class);
 });
