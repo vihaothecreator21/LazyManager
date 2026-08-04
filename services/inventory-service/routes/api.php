@@ -1,6 +1,7 @@
 <?php
 
 use App\Application\DTOs\VerifiedToken;
+use App\Http\Controllers\DailySaleController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\SkuController;
@@ -41,5 +42,8 @@ Route::prefix('v1')->middleware(['auth.jwt', 'csrf.double_submit'])->group(funct
     Route::post('/stock-imports', [StockImportController::class, 'store']);
     Route::get('/stock-imports/{stockImport}/preview', [StockImportController::class, 'preview']);
     Route::post('/stock-imports/{stockImport}/confirm', [StockImportController::class, 'confirm']);
+    Route::get('/daily-sales', [DailySaleController::class, 'index']);
+    Route::post('/daily-sales', [DailySaleController::class, 'store']);
+    Route::get('/daily-sales/{dailySale}', [DailySaleController::class, 'show']);
     Route::apiResource('products', ProductController::class);
 });

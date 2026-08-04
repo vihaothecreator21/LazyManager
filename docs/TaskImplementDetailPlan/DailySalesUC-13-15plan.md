@@ -711,7 +711,7 @@ git commit -m "feat(inventory): add daily sales schema"
 - `ListDailySalesUseCase::execute(?string $dateFrom, ?string $dateTo, ?string $status, int $perPage = 20): LengthAwarePaginator`.
 - `GetDailySaleUseCase::execute(DailySale $dailySale): DailySale`.
 
-- [ ] **Step 1: Add failing parser tests**
+- [x] **Step 1: Add failing parser tests**
 
 Add tests:
 
@@ -736,7 +736,7 @@ Quantity <= 0 returns "Số lượng bán phải lớn hơn 0."
 Non-integer quantity returns "Số lượng bán phải là số nguyên."
 ```
 
-- [ ] **Step 2: Implement parser**
+- [x] **Step 2: Implement parser**
 
 Use stdlib `fopen`, `fgetcsv`, `strtoupper`, `trim`.
 Strip UTF-8 BOM from the first header cell with `preg_replace('/^\xEF\xBB\xBF/', '', $header[0])`.
@@ -762,7 +762,7 @@ Row parse output:
 ]
 ```
 
-- [ ] **Step 3: Add failing draft API tests**
+- [x] **Step 3: Add failing draft API tests**
 
 Add tests:
 
@@ -796,7 +796,7 @@ Grouped line assertion:
 ->assertJsonPath('daily_sale.lines.0.preview_quantity_after', 5);
 ```
 
-- [ ] **Step 4: Implement DTO, request and resources**
+- [x] **Step 4: Implement DTO, request and resources**
 
 `StoreDailySaleRequest` rules:
 
@@ -844,7 +844,7 @@ return [
 ]
 ```
 
-- [ ] **Step 5: Implement create/list/get use cases**
+- [x] **Step 5: Implement create/list/get use cases**
 
 Create behavior:
 
@@ -875,7 +875,7 @@ Use withCount('lines') and withExists(['lines as has_errors' => fn ($query) => $
 Do not load full lines for list.
 ```
 
-- [ ] **Step 6: Implement controller and routes**
+- [x] **Step 6: Implement controller and routes**
 
 Routes:
 
@@ -893,7 +893,7 @@ public function index(Request $request, ListDailySalesUseCase $useCase): JsonRes
 public function show(DailySale $dailySale, GetDailySaleUseCase $useCase): JsonResponse
 ```
 
-- [ ] **Step 7: Run draft API tests**
+- [x] **Step 7: Run draft API tests**
 
 Run:
 
@@ -903,7 +903,7 @@ docker compose exec -T inventory-service php artisan test --filter=DailySaleApiT
 
 Expected: PASS for schema, parser, draft, list, show tests.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```powershell
 git add services/inventory-service/app services/inventory-service/routes/api.php services/inventory-service/tests/Feature/DailySaleApiTest.php
