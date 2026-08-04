@@ -12,7 +12,7 @@ Route::prefix('v1')->group(function (): void {
 
     Route::middleware('auth.jwt')->group(function (): void {
         Route::get('/auth/me', [AuthController::class, 'me']);
-        Route::get('/employees', [EmployeeController::class, 'index'])->middleware('role.manager');
+        Route::get('/employees', [EmployeeController::class, 'index']);
         Route::get('/schedules', [ScheduleController::class, 'index']);
         Route::post('/schedules/assignments', [ScheduleController::class, 'storeAssignment'])
             ->middleware('csrf.double_submit');

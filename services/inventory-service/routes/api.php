@@ -45,5 +45,7 @@ Route::prefix('v1')->middleware(['auth.jwt', 'csrf.double_submit'])->group(funct
     Route::get('/daily-sales', [DailySaleController::class, 'index']);
     Route::post('/daily-sales', [DailySaleController::class, 'store']);
     Route::get('/daily-sales/{dailySale}', [DailySaleController::class, 'show']);
+    Route::post('/daily-sales/{dailySale}/confirm', [DailySaleController::class, 'confirm']);
+    Route::post('/daily-sales/{dailySale}/cancel', [DailySaleController::class, 'cancel']);
     Route::apiResource('products', ProductController::class);
 });

@@ -27,13 +27,14 @@ final class EmployeeManagementTest extends TestCase
             ->assertJsonMissingPath('employees.1.password');
     }
 
-    public function test_staff_cannot_list_employees(): void
+    public function test_staff_can_list_employees(): void
     {
         $staff = $this->createUser(email: 'staff@example.com', role: UserRole::Staff);
 
         $this->actingWithRole($staff, UserRole::Staff)
             ->getJson('/api/v1/employees')
-            ->assertForbidden();
+            ->assertOk()
+            ->assertJsonPath('employees.0.email', 'staff@example.com');
     }
 
     public function test_manager_can_create_employee(): void

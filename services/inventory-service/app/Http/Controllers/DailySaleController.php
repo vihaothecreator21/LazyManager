@@ -4,9 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Application\DTOs\CreateDailySaleData;
 use App\Application\DTOs\VerifiedToken;
+use App\Application\UseCases\CancelDailySaleUseCase;
+use App\Application\UseCases\ConfirmDailySaleUseCase;
 use App\Application\UseCases\CreateDailySaleUseCase;
 use App\Application\UseCases\GetDailySaleUseCase;
 use App\Application\UseCases\ListDailySalesUseCase;
+use App\Http\Requests\CancelDailySaleRequest;
 use App\Http\Requests\StoreDailySaleRequest;
 use App\Http\Resources\DailySaleResource;
 use App\Http\Resources\DailySaleSummaryResource;
@@ -62,6 +65,34 @@ final class DailySaleController extends Controller
     {
         return response()->json([
             'daily_sale' => DailySaleResource::make($useCase->execute($dailySale))->resolve($request),
+        ]);
+    }
+
+    public function confirm(DailySale $dailySale, ConfirmDailySaleUseCase $useCase, Request $request): JsonResponse
+    {
+        /** @var VerifiedToken $verified */
+        $verified = $request->attributes->get('verified_token');
+
+        $confirmed = $useCase->execute($dailySale, $verified->userId);
+
+        return response()->json([
+            'daily_sale' => DailySaleResource::make($confirmed)->resolve($request),
+        ]);
+    }
+
+    public function cancel(CancelDailySaleRequest $request, DailySale $dailySale, CancelDailySaleUseCase $useCase): JsonResponse
+    {
+        /** @var VerifiedToken $verified */
+        $verified = $request->attributes->get('verified_token');
+
+        $cancelled = $useCase->execute(
+            dailySale: $dailySale,
+            reason: (string) $request->validated('reason'),
+            cancelledBy: $verified->userId
+        );
+
+        return response()->json([
+            'daily_sale' => DailySaleResource::make($cancelled)->resolve($request),
         ]);
     }
 }

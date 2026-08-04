@@ -312,30 +312,30 @@ final class DailySaleApiTest extends InventoryFeatureTestCase
         return new UploadedFile($path, $name, 'text/csv', null, true);
     }
 
-    private function createSkuWithBalance(int $quantity, bool $active = true): ProductSku
+    private function createSkuWithBalance(int $quantity, bool $active = true, string $skuCode = 'AO-THUN-M'): ProductSku
     {
-        $product = Product::query()->create([
-            'product_code' => 'AO-THUN',
-            'name' => 'Áo thun',
-            'active' => true,
-        ]);
-        $sku = ProductSku::query()->create([
-            'product_id' => $product->id,
-            'sku_code' => 'AO-THUN-M',
-            'size' => 'M',
-            'active' => $active,
-        ]);
-        InventoryBalance::query()->create([
-            'sku_id' => $sku->id,
-            'quantity' => $quantity,
-        ]);
+        $product = Product::query()->firstOrCreate(
+            ['product_code' => 'AO-THUN'],
+            ['name' => 'Áo thun', 'active' => true],
+        );
+        $sku = ProductSku::query()->firstOrCreate(
+            ['sku_code' => $skuCode],
+            ['product_id' => $product->id, 'size' => 'M', 'active' => $active],
+        );
+        // Nếu balance chưa tồn tại thì tạo, nếu có rồi thì cập nhật số lượng
+        InventoryBalance::query()->updateOrCreate(
+            ['sku_id' => $sku->id],
+            ['quantity' => $quantity],
+        );
 
         return $sku;
     }
 
-    private function createDraftDailySale(string $salesDate = '2026-08-01'): DailySale
+    private function createDraftDailySale(string $salesDate = '2026-08-01', ?ProductSku $sku = null): DailySale
     {
-        $sku = $this->createSkuWithBalance(quantity: 10);
+        if (! $sku) {
+            $sku = $this->createSkuWithBalance(quantity: 10);
+        }
         $dailySale = DailySale::query()->create([
             'sales_date' => $salesDate,
             'file_name' => 'daily-sales.csv',
@@ -356,5 +356,321 @@ final class DailySaleApiTest extends InventoryFeatureTestCase
         ]);
 
         return $dailySale;
+    }
+
+    // =========================================================================
+    // Task 3: Confirm Daily Sale Tests
+    // =========================================================================
+
+    public function test_confirm_daily_sale_decrements_stock_and_returns_confirmed(): void
+    {
+        $sku = $this->createSkuWithBalance(quantity: 10);
+        $dailySale = $this->createDraftDailySale(); // line qty_sold=2
+
+        $this->actingWithInventoryCookie(userId: 10)
+            ->withHeaders($this->authHeaders())
+            ->postJson("/api/v1/daily-sales/{$dailySale->id}/confirm")
+            ->assertOk()
+            ->assertJsonPath('daily_sale.status', 'CONFIRMED')
+            ->assertJsonPath('daily_sale.confirmed_by', 10);
+
+        $this->assertDatabaseHas('inventory_balances', [
+            'sku_id' => $sku->id,
+            'quantity' => 8,
+        ]);
+        $this->assertDatabaseHas('inventory_transactions', [
+            'sku_id'         => $sku->id,
+            'type'           => 'SALE',
+            'quantity_change' => -2,
+            'reference_type' => 'daily_sale',
+        ]);
+    }
+
+    public function test_confirm_daily_sale_rollback_if_insufficient_stock(): void
+    {
+        $sku = $this->createSkuWithBalance(quantity: 1); // tồn = 1 nhưng bán 2
+        $dailySale = $this->createDraftDailySale('2026-08-01', $sku);      // line qty_sold=2
+
+        $this->actingWithInventoryCookie()
+            ->withHeaders($this->authHeaders())
+            ->postJson("/api/v1/daily-sales/{$dailySale->id}/confirm")
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'Không đủ tồn kho để xác nhận phiếu bán.');
+
+        $this->assertDatabaseHas('inventory_balances', [
+            'sku_id'   => $sku->id,
+            'quantity' => 1,
+        ]);
+        $this->assertDatabaseHas('daily_sales', [
+            'id'     => $dailySale->id,
+            'status' => 'DRAFT',
+        ]);
+    }
+
+    public function test_confirm_daily_sale_blocks_double_confirm(): void
+    {
+        $this->createSkuWithBalance(quantity: 10);
+        $dailySale = $this->createDraftDailySale();
+
+        $this->actingWithInventoryCookie()
+            ->withHeaders($this->authHeaders())
+            ->postJson("/api/v1/daily-sales/{$dailySale->id}/confirm")
+            ->assertOk();
+
+        $this->actingWithInventoryCookie()
+            ->withHeaders($this->authHeaders())
+            ->postJson("/api/v1/daily-sales/{$dailySale->id}/confirm")
+            ->assertStatus(409)
+            ->assertJsonPath('message', 'Phiếu này đã được xác nhận.');
+    }
+
+    public function test_confirm_daily_sale_blocks_cancelled_sale(): void
+    {
+        $dailySale = DailySale::query()->create([
+            'sales_date'  => '2026-08-01',
+            'file_name'   => 'x.csv',
+            'file_hash'   => str_repeat('e', 64),
+            'status'      => DailySaleStatus::Cancelled->value,
+            'cancelled_at' => now(),
+        ]);
+
+        $this->actingWithInventoryCookie()
+            ->withHeaders($this->authHeaders())
+            ->postJson("/api/v1/daily-sales/{$dailySale->id}/confirm")
+            ->assertStatus(409)
+            ->assertJsonPath('message', 'Phiếu đã hủy, không thể xác nhận.');
+    }
+
+    public function test_confirm_daily_sale_blocks_when_lines_have_errors(): void
+    {
+        $dailySale = DailySale::query()->create([
+            'sales_date' => '2026-08-01',
+            'file_name'  => 'err.csv',
+            'file_hash'  => str_repeat('f', 64),
+            'status'     => DailySaleStatus::Draft->value,
+        ]);
+        DailySaleLine::query()->create([
+            'daily_sale_id'    => $dailySale->id,
+            'row_number'       => 2,
+            'sku_code'         => 'UNKNOWN',
+            'raw_sku_code'     => 'UNKNOWN',
+            'raw_quantity_sold' => '2',
+            'error_message'    => 'Không tìm thấy SKU.',
+        ]);
+
+        $this->actingWithInventoryCookie()
+            ->withHeaders($this->authHeaders())
+            ->postJson("/api/v1/daily-sales/{$dailySale->id}/confirm")
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'Không thể xác nhận phiếu còn dòng lỗi.');
+    }
+
+    public function test_confirm_daily_sale_blocks_same_date_already_confirmed(): void
+    {
+        // Đã có phiếu CONFIRMED cùng ngày
+        DailySale::query()->create([
+            'sales_date'          => '2026-08-01',
+            'confirmed_sales_date' => '2026-08-01',
+            'file_name'           => 'prev.csv',
+            'file_hash'           => str_repeat('g', 64),
+            'status'              => DailySaleStatus::Confirmed->value,
+            'confirmed_at'        => now(),
+        ]);
+
+        $this->createSkuWithBalance(quantity: 10);
+        $draft = $this->createDraftDailySale(salesDate: '2026-08-01');
+
+        $this->actingWithInventoryCookie()
+            ->withHeaders($this->authHeaders())
+            ->postJson("/api/v1/daily-sales/{$draft->id}/confirm")
+            ->assertStatus(409)
+            ->assertJsonPath('message', 'Ngày bán này đã có phiếu được xác nhận.');
+    }
+
+    public function test_confirm_daily_sale_requires_csrf(): void
+    {
+        $dailySale = $this->createDraftDailySale();
+
+        $this->actingWithInventoryCookie()
+            ->post("/api/v1/daily-sales/{$dailySale->id}/confirm")
+            ->assertStatus(419);
+    }
+
+    public function test_staff_can_confirm_daily_sale(): void
+    {
+        $sku = $this->createSkuWithBalance(quantity: 10);
+        $dailySale = $this->createDraftDailySale();
+
+        $this->actingWithInventoryCookie(role: 'STAFF', userId: 30)
+            ->withHeaders($this->authHeaders())
+            ->postJson("/api/v1/daily-sales/{$dailySale->id}/confirm")
+            ->assertOk()
+            ->assertJsonPath('daily_sale.confirmed_by', 30);
+
+        $this->assertDatabaseHas('inventory_balances', [
+            'sku_id'   => $sku->id,
+            'quantity' => 8,
+        ]);
+    }
+
+    // =========================================================================
+    // Task 4: Cancel Daily Sale Tests
+    // =========================================================================
+
+    public function test_cancel_daily_sale_reverses_balances_and_writes_sale_reversal_transactions(): void
+    {
+        $sku = $this->createSkuWithBalance(quantity: 10);
+        $dailySale = $this->createDraftDailySale(); // line qty_sold = 2
+
+        // Confirm đầu tiên
+        $this->actingWithInventoryCookie(userId: 10)
+            ->withHeaders($this->authHeaders())
+            ->postJson("/api/v1/daily-sales/{$dailySale->id}/confirm")
+            ->assertOk();
+
+        // Hủy phiếu
+        $this->actingWithInventoryCookie(userId: 10)
+            ->withHeaders($this->authHeaders())
+            ->postJson("/api/v1/daily-sales/{$dailySale->id}/cancel", [
+                'reason' => 'Khách trả đơn lỗi nhập.',
+            ])
+            ->assertOk()
+            ->assertJsonPath('daily_sale.status', 'CANCELLED')
+            ->assertJsonPath('daily_sale.cancelled_by', 10)
+            ->assertJsonPath('daily_sale.cancel_reason', 'Khách trả đơn lỗi nhập.')
+            ->assertJsonPath('daily_sale.confirmed_sales_date', null);
+
+        // Kiểm tra tồn kho được cộng trả lại (8 + 2 = 10)
+        $this->assertDatabaseHas('inventory_balances', [
+            'sku_id'   => $sku->id,
+            'quantity' => 10,
+        ]);
+
+        // Kiểm tra audit transaction
+        $this->assertDatabaseHas('inventory_transactions', [
+            'sku_id'          => $sku->id,
+            'type'            => 'SALE_REVERSAL',
+            'quantity_change' => 2,
+            'reference_type'  => 'daily_sale',
+            'reason'          => 'Khách trả đơn lỗi nhập.',
+        ]);
+    }
+
+    public function test_cancel_daily_sale_blocks_when_sku_is_deactivated_after_confirm(): void
+    {
+        $sku = $this->createSkuWithBalance(quantity: 10);
+        $dailySale = $this->createDraftDailySale();
+
+        // Confirm
+        $this->actingWithInventoryCookie()
+            ->withHeaders($this->authHeaders())
+            ->postJson("/api/v1/daily-sales/{$dailySale->id}/confirm")
+            ->assertOk();
+
+        // Deactivate SKU
+        $sku->active = false;
+        $sku->save();
+
+        // Hủy phiếu -> chặn 409
+        $this->actingWithInventoryCookie()
+            ->withHeaders($this->authHeaders())
+            ->postJson("/api/v1/daily-sales/{$dailySale->id}/cancel", [
+                'reason' => 'Hủy đơn',
+            ])
+            ->assertStatus(409)
+            ->assertJsonPath('message', "SKU {$sku->sku_code} đã ngừng hoạt động và không thể hủy.");
+    }
+
+    public function test_cancel_daily_sale_requires_confirmed_status(): void
+    {
+        $dailySale = $this->createDraftDailySale(); // Đang ở DRAFT
+
+        $this->actingWithInventoryCookie()
+            ->withHeaders($this->authHeaders())
+            ->postJson("/api/v1/daily-sales/{$dailySale->id}/cancel", [
+                'reason' => 'Hủy đơn',
+            ])
+            ->assertStatus(409)
+            ->assertJsonPath('message', 'Phiếu bán chưa xác nhận nên không thể hủy.');
+    }
+
+    public function test_cancel_daily_sale_cannot_run_twice(): void
+    {
+        $dailySale = $this->createDraftDailySale();
+
+        // Confirm
+        $this->actingWithInventoryCookie()
+            ->withHeaders($this->authHeaders())
+            ->postJson("/api/v1/daily-sales/{$dailySale->id}/confirm")
+            ->assertOk();
+
+        // Hủy lần 1
+        $this->actingWithInventoryCookie()
+            ->withHeaders($this->authHeaders())
+            ->postJson("/api/v1/daily-sales/{$dailySale->id}/cancel", [
+                'reason' => 'Hủy lần 1',
+            ])
+            ->assertOk();
+
+        // Hủy lần 2 -> chặn 409
+        $this->actingWithInventoryCookie()
+            ->withHeaders($this->authHeaders())
+            ->postJson("/api/v1/daily-sales/{$dailySale->id}/cancel", [
+                'reason' => 'Hủy lần 2',
+            ])
+            ->assertStatus(409)
+            ->assertJsonPath('message', 'Phiếu bán này đã bị hủy.');
+    }
+
+    public function test_cancel_daily_sale_requires_reason(): void
+    {
+        $dailySale = $this->createDraftDailySale();
+
+        $this->actingWithInventoryCookie()
+            ->withHeaders($this->authHeaders())
+            ->postJson("/api/v1/daily-sales/{$dailySale->id}/confirm")
+            ->assertOk();
+
+        $this->actingWithInventoryCookie()
+            ->withHeaders($this->authHeaders())
+            ->postJson("/api/v1/daily-sales/{$dailySale->id}/cancel", [])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['reason']);
+    }
+
+    public function test_cancel_daily_sale_requires_csrf(): void
+    {
+        $dailySale = $this->createDraftDailySale();
+
+        $this->actingWithInventoryCookie()
+            ->post("/api/v1/daily-sales/{$dailySale->id}/cancel", [
+                'reason' => 'Hủy nháp',
+            ])
+            ->assertStatus(419);
+    }
+
+    public function test_staff_can_cancel_daily_sale(): void
+    {
+        $sku = $this->createSkuWithBalance(quantity: 10);
+        $dailySale = $this->createDraftDailySale();
+
+        $this->actingWithInventoryCookie()
+            ->withHeaders($this->authHeaders())
+            ->postJson("/api/v1/daily-sales/{$dailySale->id}/confirm")
+            ->assertOk();
+
+        $this->actingWithInventoryCookie(role: 'STAFF', userId: 40)
+            ->withHeaders($this->authHeaders())
+            ->postJson("/api/v1/daily-sales/{$dailySale->id}/cancel", [
+                'reason' => 'Staff hủy',
+            ])
+            ->assertOk()
+            ->assertJsonPath('daily_sale.status', 'CANCELLED')
+            ->assertJsonPath('daily_sale.cancelled_by', 40);
+
+        $this->assertDatabaseHas('inventory_balances', [
+            'sku_id'   => $sku->id,
+            'quantity' => 10,
+        ]);
     }
 }

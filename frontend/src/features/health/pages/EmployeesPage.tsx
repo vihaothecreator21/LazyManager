@@ -21,7 +21,8 @@ const emptyForm: EmployeePayload = {
 }
 
 export function EmployeesPage() {
-  const { logout } = useAuth()
+  const { logout, session } = useAuth()
+  const isManager = session?.user.role === 'STORE_MANAGER'
   const [employees, setEmployees] = useState<Employee[]>([])
   const [form, setForm] = useState<EmployeePayload>(emptyForm)
   const [editingId, setEditingId] = useState<number | null>(null)
@@ -126,115 +127,120 @@ export function EmployeesPage() {
         </div>
       </section>
 
-      <section className="employee-grid">
-        <form
-          className="employee-form"
-          onSubmit={(event) => {
-            event.preventDefault()
-            void saveEmployee()
-          }}
-        >
-          <div>
-            <p className="panel-label">
-              {editingId === null ? 'Tạo nhân viên' : 'Cập nhật nhân viên'}
-            </p>
-            <h2>{editingId === null ? 'Nhân viên mới' : form.email}</h2>
-          </div>
+      <section
+        className="employee-grid"
+        style={isManager ? undefined : { gridTemplateColumns: '1fr' }}
+      >
+        {isManager ? (
+          <form
+            className="employee-form"
+            onSubmit={(event) => {
+              event.preventDefault()
+              void saveEmployee()
+            }}
+          >
+            <div>
+              <p className="panel-label">
+                {editingId === null ? 'Tạo nhân viên' : 'Cập nhật nhân viên'}
+              </p>
+              <h2>{editingId === null ? 'Nhân viên mới' : form.email}</h2>
+            </div>
 
-          {error ? <p className="form-error">{error}</p> : null}
+            {error ? <p className="form-error">{error}</p> : null}
 
-          <label>
-            Họ tên
-            <input
-              required
-              value={form.name}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, name: event.target.value }))
-              }
-            />
-          </label>
-
-          <label>
-            Email
-            <input
-              required
-              type="email"
-              value={form.email}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, email: event.target.value }))
-              }
-            />
-          </label>
-
-          <label>
-            Mật khẩu
-            <input
-              required={editingId === null}
-              type="password"
-              minLength={8}
-              value={form.password}
-              placeholder={editingId === null ? '' : 'Để trống nếu giữ mật khẩu cũ'}
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  password: event.target.value,
-                }))
-              }
-            />
-          </label>
-
-          <div className="form-row">
             <label>
-              Role
-              <select
-                value={form.role}
+              Họ tên
+              <input
+                required
+                value={form.name}
                 onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    role: event.target.value as EmployeeRole,
-                  }))
+                  setForm((current) => ({ ...current, name: event.target.value }))
                 }
-              >
-                <option value="STORE_MANAGER">STORE_MANAGER</option>
-                <option value="STAFF">STAFF</option>
-              </select>
+              />
             </label>
 
             <label>
-              Trạng thái
-              <select
-                value={form.status}
+              Email
+              <input
+                required
+                type="email"
+                value={form.email}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, email: event.target.value }))
+                }
+              />
+            </label>
+
+            <label>
+              Mật khẩu
+              <input
+                required={editingId === null}
+                type="password"
+                minLength={8}
+                value={form.password}
+                placeholder={editingId === null ? '' : 'Để trống nếu giữ mật khẩu cũ'}
                 onChange={(event) =>
                   setForm((current) => ({
                     ...current,
-                    status: event.target.value as EmployeeStatus,
+                    password: event.target.value,
                   }))
                 }
-              >
-                <option value="ACTIVE">ACTIVE</option>
-                <option value="LOCKED">LOCKED</option>
-              </select>
+              />
             </label>
-          </div>
 
-          <div className="actions">
-            <button type="submit" disabled={isSaving}>
-              {isSaving ? 'Đang lưu' : 'Lưu'}
-            </button>
-            {editingId === null ? null : (
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => {
-                  setEditingId(null)
-                  setForm(emptyForm)
-                }}
-              >
-                Hủy
+            <div className="form-row">
+              <label>
+                Role
+                <select
+                  value={form.role}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      role: event.target.value as EmployeeRole,
+                    }))
+                  }
+                >
+                  <option value="STORE_MANAGER">STORE_MANAGER</option>
+                  <option value="STAFF">STAFF</option>
+                </select>
+              </label>
+
+              <label>
+                Trạng thái
+                <select
+                  value={form.status}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      status: event.target.value as EmployeeStatus,
+                    }))
+                  }
+                >
+                  <option value="ACTIVE">ACTIVE</option>
+                  <option value="LOCKED">LOCKED</option>
+                </select>
+              </label>
+            </div>
+
+            <div className="actions">
+              <button type="submit" disabled={isSaving}>
+                {isSaving ? 'Đang lưu' : 'Lưu'}
               </button>
-            )}
-          </div>
-        </form>
+              {editingId === null ? null : (
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => {
+                    setEditingId(null)
+                    setForm(emptyForm)
+                  }}
+                >
+                  Hủy
+                </button>
+              )}
+            </div>
+          </form>
+        ) : null}
 
         <section className="employee-panel" aria-live="polite">
           <div className="employee-panel-header">
@@ -258,7 +264,7 @@ export function EmployeesPage() {
                     <th>Email</th>
                     <th>Role</th>
                     <th>Status</th>
-                    <th>Thao tác</th>
+                    {isManager ? <th>Thao tác</th> : null}
                   </tr>
                 </thead>
                 <tbody>
@@ -276,21 +282,23 @@ export function EmployeesPage() {
                           {employee.status}
                         </span>
                       </td>
-                      <td>
-                        <div className="table-actions">
-                          <button type="button" onClick={() => edit(employee)}>
-                            Sửa
-                          </button>
-                          <button
-                            type="button"
-                            className="btn-danger"
-                            disabled={employee.status === 'LOCKED'}
-                            onClick={() => void lock(employee.id)}
-                          >
-                            Khóa
-                          </button>
-                        </div>
-                      </td>
+                      {isManager ? (
+                        <td>
+                          <div className="table-actions">
+                            <button type="button" onClick={() => edit(employee)}>
+                              Sửa
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-danger"
+                              disabled={employee.status === 'LOCKED'}
+                              onClick={() => void lock(employee.id)}
+                            >
+                              Khóa
+                            </button>
+                          </div>
+                        </td>
+                      ) : null}
                     </tr>
                   ))}
                 </tbody>
