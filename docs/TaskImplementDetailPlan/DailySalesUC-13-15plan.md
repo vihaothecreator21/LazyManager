@@ -15,11 +15,15 @@
 - CSV MVP dùng đúng header `sku_code,quantity_sold`.
 - Chuẩn hóa `sku_code` bằng `trim` + `uppercase`.
 - `quantity_sold` phải là số nguyên `> 0`.
+- `sales_date` phải có dạng `YYYY-MM-DD` và không được sau ngày hiện tại.
+- Parser phải hỗ trợ UTF-8 BOM, bỏ qua dòng trống hoàn toàn, báo lỗi file không có dòng dữ liệu, và giới hạn tối đa 5000 dòng dữ liệu.
 - Daily Sales theo plan này dùng CSV upload, không làm paste text trong UC-13/14/15.
 - Hệ thống gom các dòng cùng SKU trong một file thành một dòng preview.
 - Preview DRAFT không ảnh hưởng tồn kho.
+- Preview lưu snapshot bằng `preview_quantity_before` và `preview_quantity_after`; ledger mới là nguồn sự thật tồn kho thực tế lúc confirm/cancel.
 - Confirm trừ tồn đúng một lần bằng transaction `SALE`.
 - Cancel cộng trả tồn đúng một lần bằng transaction `SALE_REVERSAL`.
+- Confirm và Cancel phải query lại SKU và balance tại thời điểm thực thi, không tin relation hoặc snapshot từ DRAFT.
 - Mọi thay đổi balance phải đi qua `InventoryBalanceService`.
 - Mọi thay đổi balance phải tạo `inventory_transactions`.
 - Mọi thay đổi balance phải nằm trong DB transaction.
@@ -61,9 +65,10 @@ In scope:
 - CSV header cố định: `sku_code,quantity_sold`.
 - Parse preview, gom dòng cùng SKU trong file, lưu raw input tóm tắt theo dòng đầu tiên và tổng quantity.
 - Lưu `daily_sales` trạng thái `DRAFT`.
-- Lưu `daily_sale_lines` gồm `sku_code`, `sku_id`, `quantity_sold`, `quantity_before`, `quantity_after`, `error_message`.
+- Lưu `daily_sale_lines` gồm `sku_code`, `sku_id`, `quantity_sold`, `preview_quantity_before`, `preview_quantity_after`, `error_message`.
 - Báo lỗi khi SKU không tồn tại, inactive, soft-deleted, quantity không phải số nguyên, quantity <= 0.
 - Chặn tạo/confirm nếu đã có phiếu `CONFIRMED` cùng `sales_date`.
+- Tính `file_hash = hash_file('sha256', uploaded file path)` và lưu để audit; không chặn duplicate file trong Daily Sales.
 - Confirm chỉ chạy khi phiếu `DRAFT` và không có dòng lỗi.
 - Confirm trừ tồn bằng `InventoryBalanceService::decrease(... Sale ...)`.
 - Nếu bất kỳ SKU không đủ tồn lúc confirm, rollback toàn bộ.
@@ -152,8 +157,8 @@ Preview response:
         "sku_code": "AO-THUN-M",
         "sku_id": 1,
         "quantity_sold": 5,
-        "quantity_before": 10,
-        "quantity_after": 5,
+        "preview_quantity_before": 10,
+        "preview_quantity_after": 5,
         "error_message": null
       }
     ]
@@ -198,7 +203,7 @@ id bigint primary key
 sales_date date not null
 confirmed_sales_date date nullable unique
 file_name varchar(255) not null
-file_hash varchar(64) nullable
+file_hash varchar(64) not null
 status varchar(32) not null default DRAFT
 confirmed_at timestamp nullable
 cancelled_at timestamp nullable
@@ -227,12 +232,12 @@ id bigint primary key
 daily_sale_id bigint not null foreign key daily_sales.id cascade delete
 row_number integer not null
 sku_code varchar(64) not null
-sku_id bigint nullable foreign key product_skus.id null on delete
+sku_id bigint nullable foreign key product_skus.id restrict on delete
 raw_sku_code varchar(255) nullable
 raw_quantity_sold varchar(255) nullable
 quantity_sold integer nullable
-quantity_before integer nullable
-quantity_after integer nullable
+preview_quantity_before integer nullable
+preview_quantity_after integer nullable
 error_message varchar(255) nullable
 created_at timestamp nullable
 updated_at timestamp nullable
@@ -269,6 +274,7 @@ services/inventory-service/app/Infrastructure/CsvDailySaleParser.php
 services/inventory-service/app/Http/Controllers/DailySaleController.php
 services/inventory-service/app/Http/Requests/StoreDailySaleRequest.php
 services/inventory-service/app/Http/Requests/CancelDailySaleRequest.php
+services/inventory-service/app/Http/Resources/DailySaleSummaryResource.php
 services/inventory-service/app/Http/Resources/DailySaleResource.php
 services/inventory-service/app/Http/Resources/DailySaleLineResource.php
 services/inventory-service/tests/Feature/DailySaleApiTest.php
@@ -329,7 +335,10 @@ Client POST /daily-sales/{id}/confirm
   -> Block if another CONFIRMED row exists for sales_date
   -> Set confirmed_sales_date = sales_date; unique DB constraint handles race
   -> Block if any line error exists
-  -> For each line call InventoryBalanceService::decrease(... SALE ...)
+  -> For each line, query ProductSku fresh by `sku_id` without trusting loaded relation.
+If SKU is missing, inactive or soft-deleted, throw 409 "SKU {sku_code} đã ngừng hoạt động và không thể xác nhận.".
+If balance is missing, throw 422 "Không tìm thấy dữ liệu tồn kho của SKU.".
+For each line call InventoryBalanceService::decrease(... SALE ...)
   -> If any line insufficient stock, rollback all
   -> Set status CONFIRMED, confirmed_at, confirmed_by
   -> DailySaleResource
@@ -343,7 +352,10 @@ Client POST /daily-sales/{id}/cancel
   -> CancelDailySaleUseCase
   -> DB transaction locks daily_sales row
   -> Block if status != CONFIRMED
-  -> For each line call InventoryBalanceService::increase(... SALE_REVERSAL ...)
+  -> For each line, query ProductSku fresh by `sku_id` without trusting loaded relation.
+If SKU is missing, inactive or soft-deleted, throw 409 "SKU {sku_code} đã ngừng hoạt động và không thể hủy.".
+If balance is missing, throw 422 "Không tìm thấy dữ liệu tồn kho của SKU.".
+For each line call InventoryBalanceService::increase(... SALE_REVERSAL ...)
   -> Set status CANCELLED, cancelled_at, cancelled_by, cancel_reason
   -> Set confirmed_sales_date = null
   -> DailySaleResource
@@ -493,8 +505,8 @@ public function test_daily_sales_tables_exist(): void
         'raw_sku_code',
         'raw_quantity_sold',
         'quantity_sold',
-        'quantity_before',
-        'quantity_after',
+        'preview_quantity_before',
+        'preview_quantity_after',
         'error_message',
     ]));
 }
@@ -520,7 +532,7 @@ Schema::create('daily_sales', function (Blueprint $table): void {
     $table->date('sales_date');
     $table->date('confirmed_sales_date')->nullable()->unique();
     $table->string('file_name');
-    $table->string('file_hash', 64)->nullable();
+    $table->string('file_hash', 64);
     $table->string('status', 32)->default('DRAFT');
     $table->timestamp('confirmed_at')->nullable();
     $table->timestamp('cancelled_at')->nullable();
@@ -539,12 +551,12 @@ Schema::create('daily_sale_lines', function (Blueprint $table): void {
     $table->foreignId('daily_sale_id')->constrained('daily_sales')->cascadeOnDelete();
     $table->unsignedInteger('row_number');
     $table->string('sku_code', 64);
-    $table->foreignId('sku_id')->nullable()->constrained('product_skus')->nullOnDelete();
+    $table->foreignId('sku_id')->nullable()->constrained('product_skus')->restrictOnDelete();
     $table->string('raw_sku_code')->nullable();
     $table->string('raw_quantity_sold')->nullable();
     $table->unsignedInteger('quantity_sold')->nullable();
-    $table->integer('quantity_before')->nullable();
-    $table->integer('quantity_after')->nullable();
+    $table->integer('preview_quantity_before')->nullable();
+    $table->integer('preview_quantity_after')->nullable();
     $table->string('error_message')->nullable();
     $table->timestamps();
     $table->unique(['daily_sale_id', 'row_number']);
@@ -606,8 +618,8 @@ protected $fillable = [
     'raw_sku_code',
     'raw_quantity_sold',
     'quantity_sold',
-    'quantity_before',
-    'quantity_after',
+    'preview_quantity_before',
+    'preview_quantity_after',
     'error_message',
 ];
 ```
@@ -623,6 +635,7 @@ public function test_daily_sale_model_relationships_work(): void
     $dailySale = DailySale::query()->create([
         'sales_date' => '2026-08-03',
         'file_name' => 'daily-sales.csv',
+        'file_hash' => str_repeat('a', 64),
         'status' => DailySaleStatus::Draft->value,
         'created_by' => 10,
     ]);
@@ -634,8 +647,8 @@ public function test_daily_sale_model_relationships_work(): void
         'raw_quantity_sold' => '2',
         'sku_id' => $sku->id,
         'quantity_sold' => 2,
-        'quantity_before' => 10,
-        'quantity_after' => 8,
+        'preview_quantity_before' => 10,
+        'preview_quantity_after' => 8,
     ]);
 
     self::assertSame('AO-THUN-M', $dailySale->lines()->first()->sku->sku_code);
@@ -683,7 +696,7 @@ git commit -m "feat(inventory): add daily sales schema"
 - `CreateDailySaleData::__construct(UploadedFile $file, string $salesDate, ?int $createdBy)`.
 - `CsvDailySaleParser::parse(string $path): array<int, array{row_number:int,raw_sku_code:?string,raw_quantity_sold:?string,sku_code:string,quantity_sold:?int,error_message:?string}>`.
 - `CreateDailySaleUseCase::execute(CreateDailySaleData $data): DailySale`.
-- `ListDailySalesUseCase::execute(?string $dateFrom, ?string $dateTo, ?string $status): Collection`.
+- `ListDailySalesUseCase::execute(?string $dateFrom, ?string $dateTo, ?string $status, int $perPage = 20): LengthAwarePaginator`.
 - `GetDailySaleUseCase::execute(DailySale $dailySale): DailySale`.
 
 - [ ] **Step 1: Add failing parser tests**
@@ -694,12 +707,19 @@ Add tests:
 public function test_daily_sale_csv_parser_accepts_template_and_normalizes_sku_code(): void
 public function test_daily_sale_csv_parser_rejects_wrong_header(): void
 public function test_daily_sale_csv_parser_marks_invalid_quantity_rows(): void
+public function test_daily_sale_csv_parser_handles_bom_blank_rows_and_groups_normalized_sku(): void
+public function test_daily_sale_csv_parser_rejects_file_without_data_rows(): void
+public function test_daily_sale_csv_parser_rejects_more_than_5000_data_rows(): void
 ```
 
 Expected parser behavior:
 
 ```text
 Header must be sku_code,quantity_sold.
+Header may start with UTF-8 BOM.
+Completely blank rows are ignored.
+File with only header returns "File CSV phải có ít nhất một dòng dữ liệu."
+More than 5000 data rows returns "File CSV chỉ được có tối đa 5000 dòng dữ liệu."
 Quantity <= 0 returns "Số lượng bán phải lớn hơn 0."
 Non-integer quantity returns "Số lượng bán phải là số nguyên."
 ```
@@ -707,6 +727,9 @@ Non-integer quantity returns "Số lượng bán phải là số nguyên."
 - [ ] **Step 2: Implement parser**
 
 Use stdlib `fopen`, `fgetcsv`, `strtoupper`, `trim`.
+Strip UTF-8 BOM from the first header cell with `preg_replace('/^\xEF\xBB\xBF/', '', $header[0])`.
+Ignore rows where every CSV cell is `null` or trims to `''`.
+Count nonblank data rows; reject after 5000 rows.
 
 Header error:
 
@@ -736,8 +759,12 @@ public function test_create_daily_sale_draft_creates_sale_and_grouped_lines(): v
 public function test_create_daily_sale_marks_missing_sku_error_by_line(): void
 public function test_create_daily_sale_marks_inactive_sku_error_by_line(): void
 public function test_create_daily_sale_blocks_when_confirmed_sale_exists_for_same_date(): void
+public function test_create_daily_sale_rejects_future_sales_date(): void
 public function test_get_daily_sale_does_not_require_csrf(): void
 public function test_list_daily_sales_does_not_require_csrf(): void
+public function test_list_daily_sales_paginates_and_does_not_return_lines(): void
+public function test_list_daily_sales_filters_by_date_range_and_status(): void
+public function test_list_daily_sales_rejects_date_to_before_date_from(): void
 public function test_staff_can_create_daily_sale_draft(): void
 public function test_create_daily_sale_requires_csrf(): void
 ```
@@ -751,9 +778,10 @@ Grouped line assertion:
 ])
 ->assertCreated()
 ->assertJsonPath('daily_sale.status', 'DRAFT')
+->assertJsonPath('daily_sale.file_hash', fn ($value): bool => is_string($value) && strlen($value) === 64)
 ->assertJsonPath('daily_sale.lines.0.quantity_sold', 5)
-->assertJsonPath('daily_sale.lines.0.quantity_before', 10)
-->assertJsonPath('daily_sale.lines.0.quantity_after', 5);
+->assertJsonPath('daily_sale.lines.0.preview_quantity_before', 10)
+->assertJsonPath('daily_sale.lines.0.preview_quantity_after', 5);
 ```
 
 - [ ] **Step 4: Implement DTO, request and resources**
@@ -762,12 +790,28 @@ Grouped line assertion:
 
 ```php
 return [
-    'sales_date' => ['required', 'date_format:Y-m-d'],
+    'sales_date' => ['required', 'date_format:Y-m-d', 'before_or_equal:today'],
     'file' => ['required', 'file', 'mimes:csv,txt', 'max:2048'],
 ];
 ```
 
-`DailySaleResource` keys:
+`DailySaleSummaryResource` keys for list:
+
+```php
+[
+    'id',
+    'sales_date',
+    'file_name',
+    'status',
+    'has_errors',
+    'lines_count',
+    'confirmed_at',
+    'cancelled_at',
+    'created_at',
+]
+```
+
+`DailySaleResource` keys for show/create/confirm/cancel:
 
 ```php
 [
@@ -794,24 +838,29 @@ Create behavior:
 
 ```text
 Reject if DailySale exists with status CONFIRMED and same sales_date.
+Compute `$fileHash = hash_file('sha256', $data->file->getRealPath())` and store it for audit only.
 Parse file.
 Group rows by sku_code only when row has no parser error.
 For grouped SKU, quantity_sold = sum.
 Find ProductSku without withTrashed().
 If not found, check withTrashed(); if found inactive/deleted, error "SKU đã ngừng hoạt động.", otherwise "Không tìm thấy SKU.".
 For active SKU, read InventoryBalance quantity.
-quantity_before = current balance.
-quantity_after = current balance - quantity_sold.
-Do not reject insufficient stock at draft time; show negative quantity_after so operator sees risk.
+preview_quantity_before = current balance.
+preview_quantity_after = current balance - quantity_sold.
+Do not reject insufficient stock at draft time; show negative preview_quantity_after so operator sees risk.
 Store DRAFT and lines.
+Do not use file_hash to block duplicate Daily Sales files.
 ```
 
 List behavior:
 
 ```text
+Return paginator with per_page default 20, max 100.
 Order newest first by sales_date desc, id desc.
 Optional filters date_from, date_to, status.
-Load lines count through has_errors from resource, not separate DTO.
+Reject date_to before date_from with 422 "Khoảng ngày lọc không hợp lệ."
+Use withCount('lines') and withExists(['lines as has_errors' => fn ($query) => $query->whereNotNull('error_message')]).
+Do not load full lines for list.
 ```
 
 - [ ] **Step 6: Implement controller and routes**
@@ -871,6 +920,8 @@ Add tests:
 ```php
 public function test_confirm_daily_sale_decreases_balances_and_writes_sale_transactions(): void
 public function test_confirm_daily_sale_rolls_back_when_any_sku_has_insufficient_stock(): void
+public function test_confirm_daily_sale_uses_current_balance_when_stock_changed_after_preview(): void
+public function test_confirm_daily_sale_blocks_when_sku_is_deactivated_after_preview(): void
 public function test_confirm_daily_sale_blocks_sale_with_line_errors(): void
 public function test_confirm_daily_sale_cannot_run_twice(): void
 public function test_confirm_daily_sale_blocks_when_another_sale_confirmed_same_date(): void
@@ -894,6 +945,21 @@ $this->assertDatabaseHas('inventory_transactions', [
 ]);
 ```
 
+Rollback assertion for insufficient stock:
+
+```php
+$this->assertDatabaseHas('daily_sales', [
+    'id' => $dailySale->id,
+    'status' => 'DRAFT',
+    'confirmed_sales_date' => null,
+]);
+$this->assertDatabaseMissing('inventory_transactions', [
+    'reference_type' => 'daily_sale',
+    'reference_id' => (string) $dailySale->id,
+    'type' => 'SALE',
+]);
+```
+
 - [ ] **Step 2: Implement confirm use case**
 
 Behavior:
@@ -907,6 +973,9 @@ If status is CANCELLED, throw 409 "Phiếu bán này đã bị hủy.".
 If any line has error_message, throw 422 "Không thể xác nhận phiếu bán còn dòng lỗi.".
 If another daily_sales row has status CONFIRMED and same sales_date, throw 409 "Ngày bán này đã có phiếu được xác nhận.".
 Set confirmed_sales_date = sales_date before balance mutation and save; catch unique violation and map to same 409.
+For each line, query ProductSku fresh by `sku_id` without trusting loaded relation.
+If SKU is missing, inactive or soft-deleted, throw 409 "SKU {sku_code} đã ngừng hoạt động và không thể xác nhận.".
+If balance is missing, throw 422 "Không tìm thấy dữ liệu tồn kho của SKU.".
 For each line call InventoryBalanceService::decrease(
   sku: $sku,
   quantity: $line->quantity_sold,
@@ -981,6 +1050,8 @@ Add tests:
 
 ```php
 public function test_cancel_daily_sale_reverses_balances_and_writes_sale_reversal_transactions(): void
+public function test_cancel_daily_sale_blocks_when_sku_is_deactivated_after_confirm(): void
+public function test_cancel_daily_sale_rolls_back_when_any_line_cannot_be_reversed(): void
 public function test_cancel_daily_sale_clears_confirmed_sales_date(): void
 public function test_cancel_daily_sale_requires_confirmed_status(): void
 public function test_cancel_daily_sale_cannot_run_twice(): void
@@ -1031,6 +1102,9 @@ Lock daily_sales row with lockForUpdate().
 Reload lines ordered by row_number.
 If status is DRAFT, throw 409 "Phiếu bán chưa xác nhận nên không thể hủy.".
 If status is CANCELLED, throw 409 "Phiếu bán này đã bị hủy.".
+For each line, query ProductSku fresh by `sku_id` without trusting loaded relation.
+If SKU is missing, inactive or soft-deleted, throw 409 "SKU {sku_code} đã ngừng hoạt động và không thể hủy.".
+If balance is missing, throw 422 "Không tìm thấy dữ liệu tồn kho của SKU.".
 For each line call InventoryBalanceService::increase(
   sku: $sku,
   quantity: $line->quantity_sold,
@@ -1106,7 +1180,7 @@ git commit -m "feat(inventory): cancel daily sales"
 
 **Interfaces:**
 
-- `listDailySales(): Promise<DailySale[]>`.
+- `listDailySales(): Promise<PaginatedDailySales>`.
 - `createDailySale(input: { salesDate: string; file: File }): Promise<DailySale>`.
 - `getDailySale(id: number): Promise<DailySale>`.
 - `confirmDailySale(id: number): Promise<DailySale>`.
@@ -1169,8 +1243,8 @@ export type DailySaleLine = {
   sku_code: string
   sku_id: number | null
   quantity_sold: number | null
-  quantity_before: number | null
-  quantity_after: number | null
+  preview_quantity_before: number | null
+  preview_quantity_after: number | null
   error_message: string | null
 }
 
@@ -1190,13 +1264,27 @@ export type DailySale = {
   created_at: string | null
   lines: DailySaleLine[]
 }
+
+export type DailySaleSummary = Omit<DailySale, 'file_hash' | 'cancel_reason' | 'created_by' | 'confirmed_by' | 'cancelled_by' | 'lines'> & {
+  lines_count: number
+}
+
+export type PaginatedDailySales = {
+  data: DailySaleSummary[]
+  meta: {
+    current_page: number
+    per_page: number
+    total: number
+    last_page: number
+  }
+}
 ```
 
 Functions:
 
 ```ts
 export async function createDailySale(input: { salesDate: string; file: File }): Promise<DailySale>
-export async function listDailySales(): Promise<DailySale[]>
+export async function listDailySales(): Promise<PaginatedDailySales>
 export async function getDailySale(id: number): Promise<DailySale>
 export async function confirmDailySale(id: number): Promise<DailySale>
 export async function cancelDailySale(id: number, reason: string): Promise<DailySale>
@@ -1211,9 +1299,9 @@ Dòng
 Mã SKU
 SKU gốc
 Số lượng bán gốc
-Tồn trước
+Tồn lúc xem trước
 Số bán
-Tồn sau
+Tồn dự kiến
 Lỗi
 ```
 
@@ -1497,8 +1585,14 @@ Expected manual result:
 ## Acceptance Checklist
 
 - [ ] `daily_sales` table exists with `confirmed_sales_date` unique nullable.
+- [ ] `daily_sales.file_hash` is calculated with sha256 and stored for audit only.
 - [ ] `daily_sale_lines` stores row-level preview.
+- [ ] `daily_sale_lines.sku_id` uses restrict on delete.
 - [ ] CSV parser accepts exact `sku_code,quantity_sold` header.
+- [ ] CSV parser accepts UTF-8 BOM.
+- [ ] CSV parser ignores completely blank rows.
+- [ ] CSV parser rejects empty/header-only files.
+- [ ] CSV parser rejects files with more than 5000 data rows.
 - [ ] Wrong header returns Vietnamese validation error.
 - [ ] SKU code is normalized by trim + uppercase.
 - [ ] Duplicate SKU in one file is grouped.
@@ -1507,8 +1601,12 @@ Expected manual result:
 - [ ] Quantity <= 0 creates line error.
 - [ ] Non-integer quantity creates line error.
 - [ ] DRAFT creation does not mutate inventory balances.
-- [ ] DRAFT creation stores preview quantity_before and quantity_after.
+- [ ] DRAFT creation stores preview_quantity_before and preview_quantity_after.
+- [ ] DRAFT creation rejects future sales_date.
 - [ ] DRAFT creation blocks when another sale is already CONFIRMED for same sales_date.
+- [ ] List route returns paginated summaries without full lines.
+- [ ] List supports date_from, date_to and status filters.
+- [ ] List rejects date_to before date_from.
 - [ ] List and show routes work without CSRF.
 - [ ] Create requires CSRF.
 - [ ] Confirm requires CSRF.
@@ -1518,12 +1616,14 @@ Expected manual result:
 - [ ] Confirm blocks sales with line errors.
 - [ ] Confirm cannot run twice.
 - [ ] Confirm blocks another CONFIRMED sale for same sales_date.
+- [ ] Confirm revalidates SKU and balance at execution time.
 - [ ] Confirm race is protected by unique `confirmed_sales_date`.
 - [ ] Confirm rolls back all balance changes when any SKU lacks stock.
 - [ ] Confirm updates balances through `InventoryBalanceService::decrease()`.
 - [ ] Confirm creates `SALE` ledger rows.
 - [ ] Cancel only works for CONFIRMED sales.
 - [ ] Cancel cannot run twice.
+- [ ] Cancel revalidates SKU and balance at execution time.
 - [ ] Cancel updates balances through `InventoryBalanceService::increase()`.
 - [ ] Cancel creates `SALE_REVERSAL` ledger rows.
 - [ ] Cancel clears `confirmed_sales_date`.
