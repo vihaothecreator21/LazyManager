@@ -381,7 +381,7 @@ For each line call InventoryBalanceService::increase(... SALE_REVERSAL ...)
 - Confirms `InventoryTransactionType::Sale` and `SaleReversal` exist.
 - Confirms `VerifiedToken->userId` is available for `created_by`, `confirmed_by`, `cancelled_by`.
 
-- [ ] **Step 1: Verify transaction enum**
+- [x] **Step 1: Verify transaction enum**
 
 Run:
 
@@ -396,7 +396,7 @@ Sale = 'SALE'
 SaleReversal = 'SALE_REVERSAL'
 ```
 
-- [ ] **Step 2: Verify inventory mutation service**
+- [x] **Step 2: Verify inventory mutation service**
 
 Run:
 
@@ -416,7 +416,7 @@ applyDelta() locks balance with lockForUpdate().
 applyDelta() throws InsufficientStockException and rolls back when quantityAfter < 0.
 ```
 
-- [ ] **Step 3: Verify exception mapping**
+- [x] **Step 3: Verify exception mapping**
 
 Run:
 
@@ -431,7 +431,7 @@ InventoryBusinessException maps status to JSON.
 InsufficientStockException maps to Vietnamese message and 422.
 ```
 
-- [ ] **Step 4: Verify SKU policy**
+- [x] **Step 4: Verify SKU policy**
 
 Run:
 
@@ -447,13 +447,25 @@ Daily Sales only accepts active, non-soft-deleted SKU.
 Inactive or soft-deleted SKU returns line error "SKU đã ngừng hoạt động.".
 ```
 
-- [ ] **Step 5: Commit preflight note**
+- [x] **Step 5: Commit preflight note**
 
 After documenting result in this plan:
 
 ```powershell
 git add docs/TaskImplementDetailPlan/DailySalesUC-13-15plan.md
-git commit -m "docs: add daily sales implementation plan"
+git commit -m "docs: verify daily sales preflight"
+```
+
+Task 0 result, verified on 2026-08-04:
+
+```text
+InventoryTransactionType has Sale = 'SALE' and SaleReversal = 'SALE_REVERSAL'.
+InventoryBalanceService::decrease() and increase() reject quantity <= 0, delegate to applyDelta(), use DB::transaction(), lock inventory_balances with lockForUpdate(), and create inventory_transactions.
+InventoryBalanceService::decrease() throws InsufficientStockException and rolls back when quantityAfter < 0.
+InventoryBusinessException supports custom HTTP status; bootstrap/app.php renders it as JSON for api/* requests.
+InsufficientStockException extends InventoryBusinessException with the Vietnamese insufficient stock message and default 422 status.
+ProductSku uses SoftDeletes and active boolean; Daily Sales must import/confirm/cancel only active, non-soft-deleted SKU.
+VerifiedToken exposes userId and role; Daily Sales can use userId for created_by, confirmed_by and cancelled_by.
 ```
 
 ---
