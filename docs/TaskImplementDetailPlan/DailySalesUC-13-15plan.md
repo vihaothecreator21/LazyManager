@@ -487,7 +487,7 @@ VerifiedToken exposes userId and role; Daily Sales can use userId for created_by
 - Produces `DailySaleLine::dailySale(): BelongsTo`.
 - Produces `DailySaleLine::sku(): BelongsTo`.
 
-- [ ] **Step 1: Add failing schema tests**
+- [x] **Step 1: Add failing schema tests**
 
 Create `DailySaleApiTest.php` with:
 
@@ -524,7 +524,7 @@ public function test_daily_sales_tables_exist(): void
 }
 ```
 
-- [ ] **Step 2: Run failing schema tests**
+- [x] **Step 2: Run failing schema tests**
 
 Run:
 
@@ -534,7 +534,7 @@ docker compose exec -T inventory-service php artisan test --filter=daily_sales_t
 
 Expected: FAIL because tables do not exist.
 
-- [ ] **Step 3: Add migration**
+- [x] **Step 3: Add migration**
 
 Create migration with:
 
@@ -577,7 +577,7 @@ Schema::create('daily_sale_lines', function (Blueprint $table): void {
 });
 ```
 
-- [ ] **Step 4: Add enum and models**
+- [x] **Step 4: Add enum and models**
 
 `DailySaleStatus.php`:
 
@@ -636,7 +636,7 @@ protected $fillable = [
 ];
 ```
 
-- [ ] **Step 5: Add relationship test**
+- [x] **Step 5: Add relationship test**
 
 Add:
 
@@ -668,7 +668,7 @@ public function test_daily_sale_model_relationships_work(): void
 }
 ```
 
-- [ ] **Step 6: Run schema/model tests**
+- [x] **Step 6: Run schema/model tests**
 
 Run:
 
@@ -678,7 +678,7 @@ docker compose exec -T inventory-service php artisan test --filter=DailySaleApiT
 
 Expected: PASS for schema/model tests.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```powershell
 git add services/inventory-service/database/migrations services/inventory-service/app/Domain/Enums services/inventory-service/app/Models services/inventory-service/tests/Feature/DailySaleApiTest.php
