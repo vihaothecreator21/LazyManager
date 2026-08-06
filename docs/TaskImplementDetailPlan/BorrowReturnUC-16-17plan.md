@@ -414,7 +414,7 @@ git commit -m "docs: verify borrow return preflight"
 - Produces `BorrowRecord::sku(): BelongsTo`.
 - Later Resource relies on `BorrowRecord` loading `sku.product`.
 
-- [ ] **Step 1: Add failing schema tests**
+- [x] **Step 1: Add failing schema tests**
 
 Create `BorrowRecordApiTest.php`:
 
@@ -508,7 +508,7 @@ final class BorrowRecordApiTest extends InventoryFeatureTestCase
 }
 ```
 
-- [ ] **Step 2: Run failing schema tests**
+- [x] **Step 2: Run failing schema tests**
 
 Run:
 
@@ -518,7 +518,7 @@ docker compose exec -T inventory-service php artisan test --filter=BorrowRecordA
 
 Expected: FAIL because table/model/enum do not exist.
 
-- [ ] **Step 3: Create migration**
+- [x] **Step 3: Create migration**
 
 Create `2026_08_06_000400_create_borrow_records_table.php`:
 
@@ -599,7 +599,7 @@ return new class extends Migration
 };
 ```
 
-- [ ] **Step 4: Create enum**
+- [x] **Step 4: Create enum**
 
 Create `BorrowRecordStatus.php`:
 
@@ -615,7 +615,7 @@ enum BorrowRecordStatus: string
 }
 ```
 
-- [ ] **Step 5: Create model**
+- [x] **Step 5: Create model**
 
 Create `BorrowRecord.php`:
 
@@ -662,7 +662,7 @@ final class BorrowRecord extends Model
 }
 ```
 
-- [ ] **Step 6: Run schema tests**
+- [x] **Step 6: Run schema tests**
 
 Run:
 
@@ -672,7 +672,7 @@ docker compose exec -T inventory-service php artisan test --filter=BorrowRecordA
 
 Expected: PASS.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```powershell
 git add services/inventory-service/database/migrations services/inventory-service/app/Domain/Enums/BorrowRecordStatus.php services/inventory-service/app/Models/BorrowRecord.php services/inventory-service/tests/Feature/BorrowRecordApiTest.php
