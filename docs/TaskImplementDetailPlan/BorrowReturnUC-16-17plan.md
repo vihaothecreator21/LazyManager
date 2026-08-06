@@ -1210,7 +1210,7 @@ git commit -m "feat(inventory): list borrow records"
 - `ReturnBorrowRecordUseCase::execute(BorrowRecord $borrowRecord, ReturnBorrowRecordData $data, ?int $returnedBy): BorrowRecord`
 - `BorrowRecordController::returnRecord(ReturnBorrowRecordRequest $request, BorrowRecord $borrowRecord, ReturnBorrowRecordUseCase $useCase): JsonResponse`
 
-- [ ] **Step 1: Add failing return tests**
+- [x] **Step 1: Add failing return tests**
 
 Add tests:
 
@@ -1320,7 +1320,7 @@ $this->actingWithInventoryCookie()
     ->assertJsonPath('borrow_record.sku_code', 'AO-THUN-M');
 ```
 
-- [ ] **Step 2: Run failing return tests**
+- [x] **Step 2: Run failing return tests**
 
 Run:
 
@@ -1330,7 +1330,7 @@ docker compose exec -T inventory-service php artisan test --filter=return_borrow
 
 Expected: FAIL because return endpoint/use case does not exist.
 
-- [ ] **Step 3: Create DTO**
+- [x] **Step 3: Create DTO**
 
 Create `ReturnBorrowRecordData.php`:
 
@@ -1347,7 +1347,7 @@ final readonly class ReturnBorrowRecordData
 }
 ```
 
-- [ ] **Step 4: Create FormRequest**
+- [x] **Step 4: Create FormRequest**
 
 Create `ReturnBorrowRecordRequest.php`:
 
@@ -1377,7 +1377,7 @@ final class ReturnBorrowRecordRequest extends FormRequest
 }
 ```
 
-- [ ] **Step 5: Create return use case**
+- [x] **Step 5: Create return use case**
 
 Create `ReturnBorrowRecordUseCase.php`:
 
@@ -1447,7 +1447,7 @@ final class ReturnBorrowRecordUseCase
 }
 ```
 
-- [ ] **Step 6: Add controller method and route**
+- [x] **Step 6: Add controller method and route**
 
 Controller:
 
@@ -1469,7 +1469,7 @@ Route:
 Route::post('/borrow-records/{borrowRecord}/return', [BorrowRecordController::class, 'returnRecord']);
 ```
 
-- [ ] **Step 7: Run return tests**
+- [x] **Step 7: Run return tests**
 
 Run:
 
@@ -1479,7 +1479,7 @@ docker compose exec -T inventory-service php artisan test --filter=return_borrow
 
 Expected: PASS.
 
-- [ ] **Step 8: Run full borrow tests**
+- [x] **Step 8: Run full borrow tests**
 
 Run:
 
@@ -1489,7 +1489,7 @@ docker compose exec -T inventory-service php artisan test --filter=BorrowRecordA
 
 Expected: PASS.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```powershell
 git add services/inventory-service/app services/inventory-service/routes/api.php services/inventory-service/tests/Feature/BorrowRecordApiTest.php

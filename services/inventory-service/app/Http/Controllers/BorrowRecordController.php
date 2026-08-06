@@ -6,6 +6,8 @@ use App\Application\DTOs\VerifiedToken;
 use App\Application\UseCases\CreateBorrowRecordUseCase;
 use App\Application\UseCases\GetBorrowRecordUseCase;
 use App\Application\UseCases\ListBorrowRecordsUseCase;
+use App\Application\UseCases\ReturnBorrowRecordUseCase;
+use App\Http\Requests\ReturnBorrowRecordRequest;
 use App\Http\Requests\StoreBorrowRecordRequest;
 use App\Http\Resources\BorrowRecordResource;
 use App\Models\BorrowRecord;
@@ -40,6 +42,21 @@ final class BorrowRecordController extends Controller
     {
         return response()->json([
             'borrow_record' => BorrowRecordResource::make($useCase->execute($borrowRecord))->resolve($request),
+        ]);
+    }
+
+    public function returnRecord(
+        ReturnBorrowRecordRequest $request,
+        BorrowRecord $borrowRecord,
+        ReturnBorrowRecordUseCase $useCase,
+    ): JsonResponse {
+        /** @var VerifiedToken $verified */
+        $verified = $request->attributes->get('verified_token');
+
+        return response()->json([
+            'borrow_record' => BorrowRecordResource::make(
+                $useCase->execute($borrowRecord, $request->toData(), $verified->userId)
+            )->resolve($request),
         ]);
     }
 }

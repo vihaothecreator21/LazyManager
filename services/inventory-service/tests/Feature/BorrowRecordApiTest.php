@@ -290,6 +290,152 @@ final class BorrowRecordApiTest extends InventoryFeatureTestCase
             ->assertJsonPath('borrow_record.id', $borrowRecord->id);
     }
 
+    public function test_return_borrow_record_increases_stock_and_writes_borrow_return_transaction(): void
+    {
+        $sku = $this->createSkuWithBalance(quantity: 8);
+        $borrowRecord = $this->createBorrowRecord(sku: $sku, quantity: 2);
+
+        $this->actingWithInventoryCookie(userId: 10)
+            ->withHeaders($this->authHeaders())
+            ->postJson("/api/v1/borrow-records/{$borrowRecord->id}/return", [
+                'return_note' => 'Đã nhận đủ, hàng còn nguyên.',
+            ])
+            ->assertOk()
+            ->assertJsonPath('borrow_record.status', 'RETURNED')
+            ->assertJsonPath('borrow_record.returned_by', 10)
+            ->assertJsonPath('borrow_record.return_note', 'Đã nhận đủ, hàng còn nguyên.');
+
+        $this->assertDatabaseHas('inventory_balances', [
+            'sku_id' => $sku->id,
+            'quantity' => 10,
+        ]);
+        $this->assertDatabaseHas('inventory_transactions', [
+            'sku_id' => $sku->id,
+            'type' => 'BORROW_RETURN',
+            'quantity_before' => 8,
+            'quantity_change' => 2,
+            'quantity_after' => 10,
+            'reference_type' => 'borrow_record',
+            'reference_id' => (string) $borrowRecord->id,
+            'reason' => 'Trả hàng mượn: Đã nhận đủ, hàng còn nguyên.',
+            'created_by' => 10,
+        ]);
+    }
+
+    public function test_return_borrow_record_cannot_run_twice(): void
+    {
+        $sku = $this->createSkuWithBalance(quantity: 8);
+        $borrowRecord = $this->createBorrowRecord(sku: $sku, quantity: 2);
+
+        $this->actingWithInventoryCookie(userId: 10)
+            ->withHeaders($this->authHeaders())
+            ->postJson("/api/v1/borrow-records/{$borrowRecord->id}/return")
+            ->assertOk();
+
+        $this->actingWithInventoryCookie(userId: 10)
+            ->withHeaders($this->authHeaders())
+            ->postJson("/api/v1/borrow-records/{$borrowRecord->id}/return")
+            ->assertStatus(409)
+            ->assertJsonPath('message', 'Phiếu mượn này đã được trả.');
+
+        $this->assertDatabaseHas('inventory_balances', [
+            'sku_id' => $sku->id,
+            'quantity' => 10,
+        ]);
+    }
+
+    public function test_return_succeeds_after_sku_is_deactivated(): void
+    {
+        $sku = $this->createSkuWithBalance(quantity: 8);
+        $borrowRecord = $this->createBorrowRecord(sku: $sku, quantity: 2);
+        $sku->update(['active' => false]);
+
+        $this->actingWithInventoryCookie(userId: 10)
+            ->withHeaders($this->authHeaders())
+            ->postJson("/api/v1/borrow-records/{$borrowRecord->id}/return", [
+                'return_note' => 'SKU đã ngừng nhưng vẫn trả được.',
+            ])
+            ->assertOk()
+            ->assertJsonPath('borrow_record.status', 'RETURNED');
+
+        $this->assertDatabaseHas('inventory_balances', [
+            'sku_id' => $sku->id,
+            'quantity' => 10,
+        ]);
+    }
+
+    public function test_return_succeeds_after_sku_is_soft_deleted(): void
+    {
+        $sku = $this->createSkuWithBalance(quantity: 8);
+        $borrowRecord = $this->createBorrowRecord(sku: $sku, quantity: 2);
+        $sku->update(['active' => false]);
+        $sku->delete();
+
+        $this->actingWithInventoryCookie(userId: 10)
+            ->withHeaders($this->authHeaders())
+            ->postJson("/api/v1/borrow-records/{$borrowRecord->id}/return")
+            ->assertOk()
+            ->assertJsonPath('borrow_record.status', 'RETURNED');
+
+        $this->assertDatabaseHas('inventory_balances', [
+            'sku_id' => $sku->id,
+            'quantity' => 10,
+        ]);
+    }
+
+    public function test_return_borrow_record_requires_csrf(): void
+    {
+        $sku = $this->createSkuWithBalance(quantity: 8);
+        $borrowRecord = $this->createBorrowRecord(sku: $sku, quantity: 2);
+
+        $this->actingWithInventoryCookie(userId: 10)
+            ->postJson("/api/v1/borrow-records/{$borrowRecord->id}/return")
+            ->assertStatus(419);
+    }
+
+    public function test_staff_can_return_borrow_record(): void
+    {
+        $sku = $this->createSkuWithBalance(quantity: 8);
+        $borrowRecord = $this->createBorrowRecord(sku: $sku, quantity: 2);
+
+        $this->actingWithInventoryCookie(role: 'STAFF', userId: 12)
+            ->withHeaders($this->authHeaders())
+            ->postJson("/api/v1/borrow-records/{$borrowRecord->id}/return")
+            ->assertOk()
+            ->assertJsonPath('borrow_record.returned_by', 12);
+
+        $this->assertDatabaseHas('inventory_balances', [
+            'sku_id' => $sku->id,
+            'quantity' => 10,
+        ]);
+    }
+
+    public function test_list_borrow_records_still_works_after_sku_is_soft_deleted(): void
+    {
+        $sku = $this->createSkuWithBalance(quantity: 10);
+        $this->createBorrowRecord(sku: $sku, quantity: 2);
+        $sku->update(['active' => false]);
+        $sku->delete();
+
+        $this->actingWithInventoryCookie()
+            ->getJson('/api/v1/borrow-records')
+            ->assertOk()
+            ->assertJsonPath('borrow_records.0.sku_code', 'AO-THUN-M');
+    }
+
+    public function test_show_borrow_record_still_works_after_sku_is_soft_deleted(): void
+    {
+        $sku = $this->createSkuWithBalance(quantity: 10);
+        $borrowRecord = $this->createBorrowRecord(sku: $sku, quantity: 2);
+        $sku->update(['active' => false]);
+        $sku->delete();
+
+        $this->actingWithInventoryCookie()
+            ->getJson("/api/v1/borrow-records/{$borrowRecord->id}")
+            ->assertOk()
+            ->assertJsonPath('borrow_record.sku_code', 'AO-THUN-M');
+    }
+
     private function createSkuWithBalance(
         int $quantity,
         bool $active = true,

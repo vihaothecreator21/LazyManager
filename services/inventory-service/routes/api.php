@@ -51,5 +51,6 @@ Route::prefix('v1')->middleware(['auth.jwt', 'csrf.double_submit'])->group(funct
     Route::get('/borrow-records', [BorrowRecordController::class, 'index']);
     Route::post('/borrow-records', [BorrowRecordController::class, 'store']);
     Route::get('/borrow-records/{borrowRecord}', [BorrowRecordController::class, 'show']);
+    Route::post('/borrow-records/{borrowRecord}/return', [BorrowRecordController::class, 'returnRecord']);
     Route::apiResource('products', ProductController::class);
 });
