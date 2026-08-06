@@ -1028,7 +1028,7 @@ git commit -m "feat(inventory): create borrow records"
 - `ListBorrowRecordsUseCase::execute(?string $status, ?string $search): Collection`
 - `GetBorrowRecordUseCase::execute(BorrowRecord $borrowRecord): BorrowRecord`
 
-- [ ] **Step 1: Add failing list/detail tests**
+- [x] **Step 1: Add failing list/detail tests**
 
 Add tests:
 
@@ -1063,7 +1063,7 @@ $this->actingWithInventoryCookie()
     ->assertJsonPath('borrow_records.0.borrow_location', 'Quầy pop-up cuối tuần');
 ```
 
-- [ ] **Step 2: Run failing list/detail tests**
+- [x] **Step 2: Run failing list/detail tests**
 
 Run:
 
@@ -1073,7 +1073,7 @@ docker compose exec -T inventory-service php artisan test --filter=borrow_record
 
 Expected: list/detail tests fail with 404 or missing methods.
 
-- [ ] **Step 3: Create list use case**
+- [x] **Step 3: Create list use case**
 
 Create `ListBorrowRecordsUseCase.php`:
 
@@ -1124,7 +1124,7 @@ final class ListBorrowRecordsUseCase
 }
 ```
 
-- [ ] **Step 4: Create get use case**
+- [x] **Step 4: Create get use case**
 
 Create `GetBorrowRecordUseCase.php`:
 
@@ -1144,7 +1144,7 @@ final class GetBorrowRecordUseCase
 }
 ```
 
-- [ ] **Step 5: Add controller methods and routes**
+- [x] **Step 5: Add controller methods and routes**
 
 Controller:
 
@@ -1174,7 +1174,7 @@ Route::get('/borrow-records', [BorrowRecordController::class, 'index']);
 Route::get('/borrow-records/{borrowRecord}', [BorrowRecordController::class, 'show']);
 ```
 
-- [ ] **Step 6: Run list/detail tests**
+- [x] **Step 6: Run list/detail tests**
 
 Run:
 
@@ -1184,7 +1184,7 @@ docker compose exec -T inventory-service php artisan test --filter=borrow_record
 
 Expected: PASS.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```powershell
 git add services/inventory-service/app services/inventory-service/routes/api.php services/inventory-service/tests/Feature/BorrowRecordApiTest.php

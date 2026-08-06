@@ -195,11 +195,112 @@ final class BorrowRecordApiTest extends InventoryFeatureTestCase
         ]);
     }
 
-    private function createSkuWithBalance(int $quantity, bool $active = true, string $skuCode = 'AO-THUN-M'): ProductSku
+    public function test_list_borrow_records_returns_newest_first(): void
+    {
+        $old = $this->createBorrowRecord(borrowerName: 'Cũ', borrowedAt: now()->subDay());
+        $new = $this->createBorrowRecord(borrowerName: 'Mới', borrowedAt: now());
+
+        $this->actingWithInventoryCookie()
+            ->getJson('/api/v1/borrow-records')
+            ->assertOk()
+            ->assertJsonPath('borrow_records.0.id', $new->id)
+            ->assertJsonPath('borrow_records.1.id', $old->id);
+    }
+
+    public function test_list_borrow_records_filters_by_status(): void
+    {
+        $borrowed = $this->createBorrowRecord(sku: $this->createSkuWithBalance(quantity: 10, skuCode: 'AO-THUN-BORROWED'));
+        $returned = $this->createBorrowRecord(
+            sku: $this->createSkuWithBalance(quantity: 10, skuCode: 'AO-THUN-RETURNED'),
+            status: BorrowRecordStatus::Returned,
+        );
+
+        $this->actingWithInventoryCookie()
+            ->getJson('/api/v1/borrow-records?status=RETURNED')
+            ->assertOk()
+            ->assertJsonCount(1, 'borrow_records')
+            ->assertJsonPath('borrow_records.0.id', $returned->id)
+            ->assertJsonPath('borrow_records.0.status', 'RETURNED');
+
+        $this->actingWithInventoryCookie()
+            ->getJson('/api/v1/borrow-records?status=BORROWED')
+            ->assertOk()
+            ->assertJsonCount(1, 'borrow_records')
+            ->assertJsonPath('borrow_records.0.id', $borrowed->id);
+    }
+
+    public function test_list_borrow_records_searches_sku_product_borrower_and_location(): void
+    {
+        $this->createBorrowRecord(
+            sku: $this->createSkuWithBalance(quantity: 10, skuCode: 'AO-THUN-POPUP'),
+            borrowerName: 'Lan cửa hàng A',
+            borrowLocation: 'Quầy pop-up cuối tuần',
+        );
+        $this->createBorrowRecord(
+            sku: $this->createSkuWithBalance(
+                quantity: 10,
+                skuCode: 'TUI-CANVAS-M',
+                productCode: 'TUI-CANVAS',
+                productName: 'Túi canvas',
+            ),
+            borrowerName: 'Minh studio',
+            borrowLocation: 'Góc chụp hình',
+        );
+
+        foreach (['pop-up', 'TUI-CANVAS-M', 'Túi canvas', 'Minh studio'] as $term) {
+            $this->actingWithInventoryCookie()
+                ->getJson('/api/v1/borrow-records?search='.rawurlencode($term))
+                ->assertOk()
+                ->assertJsonCount(1, 'borrow_records');
+        }
+
+        $this->actingWithInventoryCookie()
+            ->getJson('/api/v1/borrow-records?search=pop-up')
+            ->assertOk()
+            ->assertJsonPath('borrow_records.0.borrow_location', 'Quầy pop-up cuối tuần');
+    }
+
+    public function test_show_borrow_record_returns_detail(): void
+    {
+        $borrowRecord = $this->createBorrowRecord();
+
+        $this->actingWithInventoryCookie()
+            ->getJson("/api/v1/borrow-records/{$borrowRecord->id}")
+            ->assertOk()
+            ->assertJsonPath('borrow_record.id', $borrowRecord->id)
+            ->assertJsonPath('borrow_record.status', 'BORROWED')
+            ->assertJsonPath('borrow_record.sku_code', 'AO-THUN-M')
+            ->assertJsonPath('borrow_record.product_name', 'Áo thun')
+            ->assertJsonPath('borrow_record.borrower_name', 'Lan cửa hàng A')
+            ->assertJsonPath('borrow_record.borrow_location', 'Quầy pop-up cuối tuần');
+    }
+
+    public function test_list_and_show_do_not_require_csrf(): void
+    {
+        $borrowRecord = $this->createBorrowRecord();
+
+        $this->actingWithInventoryCookie()
+            ->getJson('/api/v1/borrow-records')
+            ->assertOk()
+            ->assertJsonCount(1, 'borrow_records');
+
+        $this->actingWithInventoryCookie()
+            ->getJson("/api/v1/borrow-records/{$borrowRecord->id}")
+            ->assertOk()
+            ->assertJsonPath('borrow_record.id', $borrowRecord->id);
+    }
+
+    private function createSkuWithBalance(
+        int $quantity,
+        bool $active = true,
+        string $skuCode = 'AO-THUN-M',
+        string $productCode = 'AO-THUN',
+        string $productName = 'Áo thun',
+    ): ProductSku
     {
         $product = Product::query()->firstOrCreate(
-            ['product_code' => 'AO-THUN'],
-            ['name' => 'Áo thun', 'active' => true],
+            ['product_code' => $productCode],
+            ['name' => $productName, 'active' => true],
         );
         $sku = ProductSku::query()->firstOrCreate(
             ['sku_code' => $skuCode],
@@ -219,13 +320,14 @@ final class BorrowRecordApiTest extends InventoryFeatureTestCase
         string $borrowerName = 'Lan cửa hàng A',
         string $borrowLocation = 'Quầy pop-up cuối tuần',
         ?DateTimeInterface $borrowedAt = null,
+        BorrowRecordStatus $status = BorrowRecordStatus::Borrowed,
     ): BorrowRecord {
         $sku ??= $this->createSkuWithBalance(quantity: 10);
 
         return BorrowRecord::query()->create([
             'sku_id' => $sku->id,
             'quantity' => $quantity,
-            'status' => BorrowRecordStatus::Borrowed->value,
+            'status' => $status->value,
             'borrower_name' => $borrowerName,
             'borrow_location' => $borrowLocation,
             'borrowed_at' => $borrowedAt ?? now(),

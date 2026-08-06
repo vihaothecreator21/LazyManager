@@ -48,6 +48,8 @@ Route::prefix('v1')->middleware(['auth.jwt', 'csrf.double_submit'])->group(funct
     Route::get('/daily-sales/{dailySale}', [DailySaleController::class, 'show']);
     Route::post('/daily-sales/{dailySale}/confirm', [DailySaleController::class, 'confirm']);
     Route::post('/daily-sales/{dailySale}/cancel', [DailySaleController::class, 'cancel']);
+    Route::get('/borrow-records', [BorrowRecordController::class, 'index']);
     Route::post('/borrow-records', [BorrowRecordController::class, 'store']);
+    Route::get('/borrow-records/{borrowRecord}', [BorrowRecordController::class, 'show']);
     Route::apiResource('products', ProductController::class);
 });
