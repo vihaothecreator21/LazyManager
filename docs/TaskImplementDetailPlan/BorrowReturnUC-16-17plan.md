@@ -699,7 +699,7 @@ git commit -m "feat(inventory): add borrow record schema"
 - `CreateBorrowRecordUseCase::execute(CreateBorrowRecordData $data, ?int $createdBy): BorrowRecord`
 - `BorrowRecordController::store(StoreBorrowRecordRequest $request, CreateBorrowRecordUseCase $useCase): JsonResponse`
 
-- [ ] **Step 1: Add failing borrow API tests**
+- [x] **Step 1: Add failing borrow API tests**
 
 Add tests:
 
@@ -762,7 +762,7 @@ Inactive SKU assertion:
 ->assertJsonPath('message', 'SKU đã ngừng hoạt động và không thể cho mượn.');
 ```
 
-- [ ] **Step 2: Run failing borrow API tests**
+- [x] **Step 2: Run failing borrow API tests**
 
 Run:
 
@@ -772,7 +772,7 @@ docker compose exec -T inventory-service php artisan test --filter=borrow_record
 
 Expected: FAIL because endpoint/use case does not exist.
 
-- [ ] **Step 3: Create DTO**
+- [x] **Step 3: Create DTO**
 
 Create `CreateBorrowRecordData.php`:
 
@@ -794,7 +794,7 @@ final readonly class CreateBorrowRecordData
 }
 ```
 
-- [ ] **Step 4: Create FormRequest**
+- [x] **Step 4: Create FormRequest**
 
 Create `StoreBorrowRecordRequest.php`:
 
@@ -844,7 +844,7 @@ final class StoreBorrowRecordRequest extends FormRequest
 }
 ```
 
-- [ ] **Step 5: Create Resource**
+- [x] **Step 5: Create Resource**
 
 Create `BorrowRecordResource.php`:
 
@@ -886,7 +886,7 @@ final class BorrowRecordResource extends JsonResource
 }
 ```
 
-- [ ] **Step 6: Create use case**
+- [x] **Step 6: Create use case**
 
 Create `CreateBorrowRecordUseCase.php`:
 
@@ -955,7 +955,7 @@ final class CreateBorrowRecordUseCase
 }
 ```
 
-- [ ] **Step 7: Create controller store method**
+- [x] **Step 7: Create controller store method**
 
 Create `BorrowRecordController.php`:
 
@@ -984,7 +984,7 @@ final class BorrowRecordController extends Controller
 }
 ```
 
-- [ ] **Step 8: Register route**
+- [x] **Step 8: Register route**
 
 Modify `routes/api.php`:
 
@@ -994,7 +994,7 @@ use App\Http\Controllers\BorrowRecordController;
 Route::post('/borrow-records', [BorrowRecordController::class, 'store']);
 ```
 
-- [ ] **Step 9: Run borrow API tests**
+- [x] **Step 9: Run borrow API tests**
 
 Run:
 
@@ -1004,7 +1004,7 @@ docker compose exec -T inventory-service php artisan test --filter=borrow_record
 
 Expected: PASS.
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```powershell
 git add services/inventory-service/app services/inventory-service/routes/api.php services/inventory-service/tests/Feature/BorrowRecordApiTest.php

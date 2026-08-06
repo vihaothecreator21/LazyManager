@@ -1,6 +1,7 @@
 <?php
 
 use App\Application\DTOs\VerifiedToken;
+use App\Http\Controllers\BorrowRecordController;
 use App\Http\Controllers\DailySaleController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\ProductController;
@@ -47,5 +48,6 @@ Route::prefix('v1')->middleware(['auth.jwt', 'csrf.double_submit'])->group(funct
     Route::get('/daily-sales/{dailySale}', [DailySaleController::class, 'show']);
     Route::post('/daily-sales/{dailySale}/confirm', [DailySaleController::class, 'confirm']);
     Route::post('/daily-sales/{dailySale}/cancel', [DailySaleController::class, 'cancel']);
+    Route::post('/borrow-records', [BorrowRecordController::class, 'store']);
     Route::apiResource('products', ProductController::class);
 });
