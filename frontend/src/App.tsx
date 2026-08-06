@@ -9,6 +9,7 @@ import { ProductsPage } from './features/inventory/pages/ProductsPage'
 import { StockImportPage } from './features/inventory/pages/StockImportPage'
 import { DailySalesPage } from './features/inventory/pages/DailySalesPage'
 import { NewDailySalePage } from './features/inventory/pages/NewDailySalePage'
+import { BorrowedPage } from './features/inventory/pages/BorrowedPage'
 import { ScheduleGridPage } from './features/schedule/pages/ScheduleGridPage'
 
 function App() {
@@ -26,6 +27,7 @@ function App() {
         <Route path="/inventory/import" element={<StockImportPage />} />
         <Route path="/daily-sales" element={<DailySalesPage />} />
         <Route path="/daily-sales/new" element={<NewDailySalePage />} />
+        <Route path="/borrowed" element={<BorrowedPage />} />
         <Route path="/employees" element={<EmployeesPage />} />
       </Route>
     </Routes>

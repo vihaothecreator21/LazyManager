@@ -1517,7 +1517,7 @@ git commit -m "feat(inventory): return borrowed records"
 - `returnBorrowRecord(id: number, payload: ReturnBorrowRecordPayload): Promise<BorrowRecord>`
 - Route: `/borrowed`.
 
-- [ ] **Step 1: Use frontend design skill**
+- [x] **Step 1: Use frontend design skill**
 
 Run relevant taste/design skill before UI edits:
 
@@ -1536,7 +1536,7 @@ Return action only for BORROWED rows.
 Calm warning state before return.
 ```
 
-- [ ] **Step 2: Add frontend route policy test**
+- [x] **Step 2: Add frontend route policy test**
 
 Create `borrowedExperience.test.mjs`:
 
@@ -1564,7 +1564,7 @@ assert.match(api, /returnBorrowRecord/)
 console.log('borrowed route policy ok')
 ```
 
-- [ ] **Step 3: Create API client**
+- [x] **Step 3: Create API client**
 
 Create `borrowRecordsApi.ts`:
 
@@ -1657,7 +1657,7 @@ export async function returnBorrowRecord(
 }
 ```
 
-- [ ] **Step 4: Create `/borrowed` page**
+- [x] **Step 4: Create `/borrowed` page**
 
 Required labels:
 
@@ -1711,7 +1711,7 @@ States: loading row skeleton, empty state bình tĩnh, error rõ.
 Accessibility: labels thật, focus state rõ, return button có accessible name.
 ```
 
-- [ ] **Step 5: Add route and navigation**
+- [x] **Step 5: Add route and navigation**
 
 In `App.tsx`:
 
@@ -1729,7 +1729,7 @@ In `DashboardPage.tsx` nav:
 <Link to="/borrowed">Hàng mượn</Link>
 ```
 
-- [ ] **Step 6: Update package test script**
+- [x] **Step 6: Update package test script**
 
 In `frontend/package.json`:
 
@@ -1737,7 +1737,7 @@ In `frontend/package.json`:
 "test": "node src/routePolicy.test.mjs && node src/dashboardExperience.test.mjs && node src/stockImportExperience.test.mjs && node src/dailySalesExperience.test.mjs && node src/borrowedExperience.test.mjs"
 ```
 
-- [ ] **Step 7: Run frontend checks**
+- [x] **Step 7: Run frontend checks**
 
 Run:
 
@@ -1760,7 +1760,7 @@ If local npm shim is broken, use:
 
 Expected: PASS.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```powershell
 git add frontend/src/App.tsx frontend/src/features frontend/src/borrowedExperience.test.mjs frontend/package.json

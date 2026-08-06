@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "test": "node src/routePolicy.test.mjs && node src/dashboardExperience.test.mjs && node src/stockImportExperience.test.mjs",
+    "test": "node src/routePolicy.test.mjs && node src/dashboardExperience.test.mjs && node src/stockImportExperience.test.mjs && node src/dailySalesExperience.test.mjs && node src/borrowedExperience.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
