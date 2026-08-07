@@ -65,7 +65,11 @@ final class ConfirmDailySaleUseCase
                         ->whereKey($line->sku_id)
                         ->first();
 
-                    if (! $sku instanceof ProductSku || $line->quantity_sold === null) {
+                    if (! $sku instanceof ProductSku || ! $sku->active || $line->quantity_sold === null) {
+                        if ($line->quantity_sold !== null) {
+                            throw new InventoryBusinessException("SKU {$line->sku_code} đã ngừng hoạt động và không thể xác nhận.", 409);
+                        }
+
                         throw new InventoryBusinessException('Không thể xác nhận phiếu còn dòng lỗi.', 422);
                     }
 

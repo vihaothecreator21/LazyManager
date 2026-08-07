@@ -13,9 +13,7 @@ const schedule = readFileSync(
 
 assert.match(app, /<Route path="\/" element={<DashboardPage \/>} \/>/)
 assert.match(app, /<Route path="\/schedule" element={<ScheduleGridPage \/>} \/>/)
-assert.match(
-  app,
-  /<Route element={<RequireManager \/>}>[\s\S]*<Route path="\/employees" element={<EmployeesPage \/>} \/>/,
-)
+assert.match(app, /<Route path="\/employees" element={<EmployeesPage \/>} \/>/)
+assert.doesNotMatch(app, /<RequireManager>[\s\S]*<Route path="\/employees"/)
 assert.doesNotMatch(dashboard, /if \(!session\) return null/)
 assert.doesNotMatch(schedule, /useAuth|Đăng xuất/)

@@ -465,6 +465,30 @@ final class DailySaleApiTest extends InventoryFeatureTestCase
             ->assertJsonPath('message', 'Không thể xác nhận phiếu còn dòng lỗi.');
     }
 
+    public function test_confirm_daily_sale_blocks_when_sku_is_deactivated_after_draft(): void
+    {
+        $sku = $this->createSkuWithBalance(quantity: 10);
+        $dailySale = $this->createDraftDailySale(sku: $sku);
+
+        $sku->active = false;
+        $sku->save();
+
+        $this->actingWithInventoryCookie()
+            ->withHeaders($this->authHeaders())
+            ->postJson("/api/v1/daily-sales/{$dailySale->id}/confirm")
+            ->assertStatus(409)
+            ->assertJsonPath('message', "SKU {$sku->sku_code} đã ngừng hoạt động và không thể xác nhận.");
+
+        $this->assertDatabaseHas('inventory_balances', [
+            'sku_id' => $sku->id,
+            'quantity' => 10,
+        ]);
+        $this->assertDatabaseHas('daily_sales', [
+            'id' => $dailySale->id,
+            'status' => 'DRAFT',
+        ]);
+    }
+
     public function test_confirm_daily_sale_blocks_same_date_already_confirmed(): void
     {
         // Đã có phiếu CONFIRMED cùng ngày
