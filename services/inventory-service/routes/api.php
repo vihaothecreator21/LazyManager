@@ -55,5 +55,8 @@ Route::prefix('v1')->middleware(['auth.jwt', 'csrf.double_submit'])->group(funct
     Route::post('/borrow-records/{borrowRecord}/return', [BorrowRecordController::class, 'returnRecord']);
     Route::get('/stock-counts', [StockCountController::class, 'index']);
     Route::post('/stock-counts', [StockCountController::class, 'store']);
+    Route::get('/stock-counts/{stockCount}', [StockCountController::class, 'show']);
+    Route::get('/stock-counts/{stockCount}/export-csv', [StockCountController::class, 'exportCsv']);
+    Route::put('/stock-counts/{stockCount}/lines', [StockCountController::class, 'updateLines']);
     Route::apiResource('products', ProductController::class);
 });

@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Domain\Enums\StockCountStatus;
 use App\Models\InventoryBalance;
+use App\Models\InventoryTransaction;
 use App\Models\Product;
 use App\Models\ProductSku;
 use App\Models\StockCount;
@@ -311,7 +312,182 @@ final class StockCountApiTest extends InventoryFeatureTestCase
         self::assertArrayNotHasKey('lines', $items[0]);
     }
 
-    private function createSkuWithBalance(int $quantity): ProductSku
+    public function test_show_stock_count_returns_snapshot_line_fields(): void
+    {
+        $sku = $this->createSkuWithBalance(quantity: 10);
+
+        $createResponse = $this->actingWithInventoryCookie()
+            ->postJson('/api/v1/stock-counts', [], $this->authHeaders());
+
+        $createResponse->assertStatus(201);
+        $stockCountId = (int) $createResponse->json('stock_count.id');
+
+        $sku->update(['sku_code' => 'SKU-DA-DOI', 'size' => 'XL']);
+        $sku->product->update(['product_code' => 'SP-DA-DOI', 'name' => 'Sản phẩm đã đổi']);
+
+        $response = $this->actingWithInventoryCookie()
+            ->getJson("/api/v1/stock-counts/{$stockCountId}");
+
+        $response->assertStatus(200);
+        $response->assertJsonPath('stock_count.lines.0.sku_code', 'AO-THUN-M');
+        $response->assertJsonPath('stock_count.lines.0.product_code', 'AO-THUN');
+        $response->assertJsonPath('stock_count.lines.0.product_name', 'Áo thun');
+        $response->assertJsonPath('stock_count.lines.0.size', 'M');
+    }
+
+    public function test_export_stock_count_csv_returns_bom_header_and_snapshot_rows(): void
+    {
+        $this->createSkuWithBalance(quantity: 10);
+
+        $createResponse = $this->actingWithInventoryCookie()
+            ->postJson('/api/v1/stock-counts', [], $this->authHeaders());
+
+        $createResponse->assertStatus(201);
+        $stockCountId = (int) $createResponse->json('stock_count.id');
+
+        $response = $this->actingWithInventoryCookie()
+            ->get("/api/v1/stock-counts/{$stockCountId}/export-csv");
+
+        $response->assertStatus(200);
+        self::assertStringStartsWith('text/csv; charset=UTF-8', (string) $response->headers->get('content-type'));
+
+        $content = $response->getContent();
+        self::assertStringStartsWith("\xEF\xBB\xBF", $content);
+        self::assertStringContainsString('sku_code,product_name,size,expected_quantity,actual_quantity,note', $content);
+        self::assertStringContainsString('AO-THUN-M,"Áo thun",M,10,,', $content);
+    }
+
+    public function test_update_stock_count_lines_calculates_variance(): void
+    {
+        $sku = $this->createSkuWithBalance(quantity: 10);
+        $stockCount = $this->createStockCount();
+        $line = $stockCount->lines()->create($this->lineAttributes($sku));
+
+        $response = $this->actingWithInventoryCookie()
+            ->putJson("/api/v1/stock-counts/{$stockCount->id}/lines", [
+                'lines' => [
+                    ['line_id' => $line->id, 'actual_quantity' => 8, 'note' => 'Thiếu 2 chiếc trên kệ'],
+                ],
+            ], $this->authHeaders());
+
+        $response->assertStatus(200);
+        $response->assertJsonPath('stock_count.lines.0.actual_quantity', 8);
+        $response->assertJsonPath('stock_count.lines.0.variance', -2);
+
+        $this->assertDatabaseHas('stock_count_lines', [
+            'id' => $line->id,
+            'actual_quantity' => 8,
+            'variance' => -2,
+            'note' => 'Thiếu 2 chiếc trên kệ',
+        ]);
+    }
+
+    public function test_all_counted_lines_mark_stock_count_counted(): void
+    {
+        $firstSku = $this->createSkuWithBalance(quantity: 10);
+        $secondSku = $this->createSkuWithBalance(quantity: 5, skuCode: 'AO-THUN-L', size: 'L');
+        $stockCount = $this->createStockCount();
+        $firstLine = $stockCount->lines()->create($this->lineAttributes($firstSku, expectedQuantity: 10));
+        $secondLine = $stockCount->lines()->create($this->lineAttributes($secondSku, expectedQuantity: 5));
+
+        $response = $this->actingWithInventoryCookie()
+            ->putJson("/api/v1/stock-counts/{$stockCount->id}/lines", [
+                'lines' => [
+                    ['line_id' => $firstLine->id, 'actual_quantity' => 10, 'note' => null],
+                    ['line_id' => $secondLine->id, 'actual_quantity' => 4, 'note' => 'Thiếu 1 chiếc'],
+                ],
+            ], $this->authHeaders());
+
+        $response->assertStatus(200);
+        $response->assertJsonPath('stock_count.status', 'COUNTED');
+        $this->assertDatabaseHas('stock_counts', ['id' => $stockCount->id, 'status' => 'COUNTED']);
+    }
+
+    public function test_partial_actuals_keep_stock_count_draft(): void
+    {
+        $firstSku = $this->createSkuWithBalance(quantity: 10);
+        $secondSku = $this->createSkuWithBalance(quantity: 5, skuCode: 'AO-THUN-L', size: 'L');
+        $stockCount = $this->createStockCount();
+        $firstLine = $stockCount->lines()->create($this->lineAttributes($firstSku, expectedQuantity: 10));
+        $stockCount->lines()->create($this->lineAttributes($secondSku, expectedQuantity: 5));
+
+        $response = $this->actingWithInventoryCookie()
+            ->putJson("/api/v1/stock-counts/{$stockCount->id}/lines", [
+                'lines' => [
+                    ['line_id' => $firstLine->id, 'actual_quantity' => 9, 'note' => null],
+                ],
+            ], $this->authHeaders());
+
+        $response->assertStatus(200);
+        $response->assertJsonPath('stock_count.status', 'DRAFT');
+        $this->assertDatabaseHas('stock_counts', ['id' => $stockCount->id, 'status' => 'DRAFT']);
+    }
+
+    public function test_update_stock_count_rejects_line_from_other_count(): void
+    {
+        $sku = $this->createSkuWithBalance(quantity: 10);
+        $otherSku = $this->createSkuWithBalance(quantity: 5, skuCode: 'AO-THUN-L', size: 'L');
+        $stockCount = $this->createStockCount(name: 'Phiên chính');
+        $otherStockCount = $this->createStockCount(name: 'Phiên khác');
+        $otherLine = $otherStockCount->lines()->create($this->lineAttributes($otherSku, expectedQuantity: 5));
+        $stockCount->lines()->create($this->lineAttributes($sku));
+
+        $response = $this->actingWithInventoryCookie()
+            ->putJson("/api/v1/stock-counts/{$stockCount->id}/lines", [
+                'lines' => [
+                    ['line_id' => $otherLine->id, 'actual_quantity' => 5, 'note' => null],
+                ],
+            ], $this->authHeaders());
+
+        $response->assertStatus(409);
+        $response->assertJsonPath('message', 'Dòng kiểm kho không thuộc phiên hiện tại.');
+    }
+
+    public function test_update_stock_count_rejects_negative_actual_quantity(): void
+    {
+        $sku = $this->createSkuWithBalance(quantity: 10);
+        $stockCount = $this->createStockCount();
+        $line = $stockCount->lines()->create($this->lineAttributes($sku));
+
+        $this->actingWithInventoryCookie()
+            ->putJson("/api/v1/stock-counts/{$stockCount->id}/lines", [
+                'lines' => [
+                    ['line_id' => $line->id, 'actual_quantity' => -1, 'note' => null],
+                ],
+            ], $this->authHeaders())
+            ->assertStatus(422);
+    }
+
+    public function test_update_stock_count_lines_does_not_change_balance_or_create_transactions(): void
+    {
+        $sku = $this->createSkuWithBalance(quantity: 10);
+        $stockCount = $this->createStockCount();
+        $line = $stockCount->lines()->create($this->lineAttributes($sku));
+
+        $response = $this->actingWithInventoryCookie()
+            ->putJson("/api/v1/stock-counts/{$stockCount->id}/lines", [
+                'lines' => [
+                    ['line_id' => $line->id, 'actual_quantity' => 8, 'note' => null],
+                ],
+            ], $this->authHeaders());
+
+        $response->assertStatus(200);
+        $this->assertDatabaseHas('inventory_balances', [
+            'sku_id' => $sku->id,
+            'quantity' => 10,
+        ]);
+        $this->assertDatabaseMissing('inventory_transactions', [
+            'sku_id' => $sku->id,
+            'reference_type' => 'stock_count',
+        ]);
+        self::assertSame(0, InventoryTransaction::query()->where('sku_id', $sku->id)->count());
+    }
+
+    private function createSkuWithBalance(
+        int $quantity,
+        string $skuCode = 'AO-THUN-M',
+        string $size = 'M',
+    ): ProductSku
     {
         $product = Product::query()->firstOrCreate(
             ['product_code' => 'AO-THUN'],
@@ -319,8 +495,8 @@ final class StockCountApiTest extends InventoryFeatureTestCase
         );
 
         $sku = ProductSku::query()->firstOrCreate(
-            ['sku_code' => 'AO-THUN-M'],
-            ['product_id' => $product->id, 'size' => 'M', 'active' => true],
+            ['sku_code' => $skuCode],
+            ['product_id' => $product->id, 'size' => $size, 'active' => true],
         );
 
         InventoryBalance::query()->updateOrCreate(
@@ -344,7 +520,7 @@ final class StockCountApiTest extends InventoryFeatureTestCase
     /**
      * @return array<string, mixed>
      */
-    private function lineAttributes(ProductSku $sku): array
+    private function lineAttributes(ProductSku $sku, int $expectedQuantity = 10): array
     {
         return [
             'sku_id' => $sku->id,
@@ -353,7 +529,7 @@ final class StockCountApiTest extends InventoryFeatureTestCase
             'product_code' => $sku->product->product_code,
             'product_name' => $sku->product->name,
             'size' => $sku->size,
-            'expected_quantity' => 10,
+            'expected_quantity' => $expectedQuantity,
         ];
     }
 
