@@ -102,6 +102,215 @@ final class StockCountApiTest extends InventoryFeatureTestCase
         $stockCount->lines()->update(['actual_quantity' => -1]);
     }
 
+    public function test_authenticated_user_can_create_stock_count_and_gets_201(): void
+    {
+        $this->createSkuWithBalance(quantity: 10);
+
+        $response = $this->actingWithInventoryCookie()
+            ->postJson('/api/v1/stock-counts', [
+                'name' => 'Kiểm kho sáng thứ Hai',
+                'count_date' => '2026-08-08',
+            ], $this->authHeaders());
+
+        $response->assertStatus(201);
+        $response->assertJsonPath('stock_count.status', 'DRAFT');
+        $response->assertJsonPath('stock_count.name', 'Kiểm kho sáng thứ Hai');
+
+        $this->assertDatabaseHas('stock_count_lines', [
+            'sku_id' => ProductSku::query()->where('sku_code', 'AO-THUN-M')->value('id'),
+            'sku_code' => 'AO-THUN-M',
+            'product_name' => 'Áo thun',
+            'size' => 'M',
+            'expected_quantity' => 10,
+            'actual_quantity' => null,
+            'variance' => null,
+        ]);
+    }
+
+    public function test_expected_quantity_stays_unchanged_after_balance_update(): void
+    {
+        $sku = $this->createSkuWithBalance(quantity: 10);
+
+        $response = $this->actingWithInventoryCookie()
+            ->postJson('/api/v1/stock-counts', [], $this->authHeaders());
+
+        $response->assertStatus(201);
+
+        InventoryBalance::query()->where('sku_id', $sku->id)->update(['quantity' => 99]);
+
+        $this->assertDatabaseHas('stock_count_lines', [
+            'sku_id' => $sku->id,
+            'expected_quantity' => 10,
+        ]);
+    }
+
+    public function test_inactive_sku_is_skipped_when_creating_stock_count(): void
+    {
+        $this->createSkuWithBalance(quantity: 10);
+
+        $inactiveProduct = Product::query()->firstOrCreate(
+            ['product_code' => 'QUAN-JEAN'],
+            ['name' => 'Quần jean', 'active' => true],
+        );
+        $inactiveSku = ProductSku::query()->firstOrCreate(
+            ['sku_code' => 'QUAN-JEAN-30'],
+            ['product_id' => $inactiveProduct->id, 'size' => '30', 'active' => false],
+        );
+        InventoryBalance::query()->updateOrCreate(
+            ['sku_id' => $inactiveSku->id],
+            ['quantity' => 5],
+        );
+
+        $response = $this->actingWithInventoryCookie()
+            ->postJson('/api/v1/stock-counts', [], $this->authHeaders());
+
+        $response->assertStatus(201);
+        $this->assertDatabaseMissing('stock_count_lines', ['sku_id' => $inactiveSku->id]);
+        $this->assertDatabaseHas('stock_count_lines', ['sku_code' => 'AO-THUN-M']);
+    }
+
+    public function test_inactive_product_is_skipped_when_creating_stock_count(): void
+    {
+        $this->createSkuWithBalance(quantity: 10);
+
+        $inactiveProduct = Product::query()->create([
+            'product_code' => 'VAY-HOA',
+            'name' => 'Váy hoa',
+            'active' => false,
+        ]);
+        $inactiveProductSku = ProductSku::query()->create([
+            'sku_code' => 'VAY-HOA-S',
+            'product_id' => $inactiveProduct->id,
+            'size' => 'S',
+            'active' => true,
+        ]);
+        InventoryBalance::query()->create(['sku_id' => $inactiveProductSku->id, 'quantity' => 4]);
+
+        $response = $this->actingWithInventoryCookie()
+            ->postJson('/api/v1/stock-counts', [], $this->authHeaders());
+
+        $response->assertStatus(201);
+        $this->assertDatabaseMissing('stock_count_lines', ['sku_id' => $inactiveProductSku->id]);
+        $this->assertDatabaseHas('stock_count_lines', ['sku_code' => 'AO-THUN-M']);
+    }
+
+    public function test_soft_deleted_sku_is_skipped_when_creating_stock_count(): void
+    {
+        $this->createSkuWithBalance(quantity: 10);
+
+        $product2 = Product::query()->firstOrCreate(
+            ['product_code' => 'MU-LUOI-TRAI'],
+            ['name' => 'Mũ lưỡi trai', 'active' => true],
+        );
+        $deletedSku = ProductSku::query()->create([
+            'sku_code' => 'MU-LUOI-TRAI-M',
+            'product_id' => $product2->id,
+            'size' => 'M',
+            'active' => true,
+        ]);
+        InventoryBalance::query()->create(['sku_id' => $deletedSku->id, 'quantity' => 3]);
+        $deletedSku->delete();
+
+        $response = $this->actingWithInventoryCookie()
+            ->postJson('/api/v1/stock-counts', [], $this->authHeaders());
+
+        $response->assertStatus(201);
+        $this->assertDatabaseMissing('stock_count_lines', ['sku_id' => $deletedSku->id]);
+    }
+
+    public function test_soft_deleted_product_is_skipped_when_creating_stock_count(): void
+    {
+        $this->createSkuWithBalance(quantity: 10);
+
+        $deletedProduct = Product::query()->create([
+            'product_code' => 'TUI-VAI',
+            'name' => 'Túi vải',
+            'active' => true,
+        ]);
+        $deletedProductSku = ProductSku::query()->create([
+            'sku_code' => 'TUI-VAI-L',
+            'product_id' => $deletedProduct->id,
+            'size' => 'L',
+            'active' => true,
+        ]);
+        InventoryBalance::query()->create(['sku_id' => $deletedProductSku->id, 'quantity' => 6]);
+        $deletedProduct->delete();
+
+        $response = $this->actingWithInventoryCookie()
+            ->postJson('/api/v1/stock-counts', [], $this->authHeaders());
+
+        $response->assertStatus(201);
+        $this->assertDatabaseMissing('stock_count_lines', ['sku_id' => $deletedProductSku->id]);
+        $this->assertDatabaseHas('stock_count_lines', ['sku_code' => 'AO-THUN-M']);
+    }
+
+    public function test_create_stock_count_requires_csrf(): void
+    {
+        $this->createSkuWithBalance(quantity: 10);
+
+        $this->actingWithInventoryCookie()
+            ->postJson('/api/v1/stock-counts', ['count_date' => '2026-08-08'])
+            ->assertStatus(419);
+    }
+
+    public function test_staff_can_create_stock_count(): void
+    {
+        $this->createSkuWithBalance(quantity: 10);
+
+        $response = $this->actingWithInventoryCookie(role: 'STAFF')
+            ->postJson('/api/v1/stock-counts', [], $this->authHeaders());
+
+        $response->assertStatus(201);
+    }
+
+    public function test_create_returns_409_when_no_active_sku_exists(): void
+    {
+        $response = $this->actingWithInventoryCookie()
+            ->postJson('/api/v1/stock-counts', [], $this->authHeaders());
+
+        $response->assertStatus(409);
+        $response->assertJsonPath('message', 'Phiên kiểm kho chưa có SKU đang hoạt động để kiểm.');
+    }
+
+    public function test_list_stock_counts_returns_newest_first(): void
+    {
+        $this->createSkuWithBalance(quantity: 10);
+
+        $this->actingWithInventoryCookie()
+            ->postJson('/api/v1/stock-counts', ['name' => 'Phiên A'], $this->authHeaders())
+            ->assertStatus(201);
+
+        $this->actingWithInventoryCookie()
+            ->postJson('/api/v1/stock-counts', ['name' => 'Phiên B'], $this->authHeaders())
+            ->assertStatus(201);
+
+        $response = $this->actingWithInventoryCookie()
+            ->getJson('/api/v1/stock-counts');
+
+        $response->assertStatus(200);
+        $response->assertJsonCount(2, 'stock_counts');
+
+        $names = array_column($response->json('stock_counts'), 'name');
+        self::assertSame('Phiên B', $names[0]);
+        self::assertSame('Phiên A', $names[1]);
+    }
+
+    public function test_list_stock_counts_does_not_include_lines(): void
+    {
+        $this->createSkuWithBalance(quantity: 10);
+
+        $this->actingWithInventoryCookie()
+            ->postJson('/api/v1/stock-counts', [], $this->authHeaders())
+            ->assertStatus(201);
+
+        $response = $this->actingWithInventoryCookie()
+            ->getJson('/api/v1/stock-counts');
+
+        $response->assertStatus(200);
+        $items = $response->json('stock_counts');
+        self::assertArrayNotHasKey('lines', $items[0]);
+    }
+
     private function createSkuWithBalance(int $quantity): ProductSku
     {
         $product = Product::query()->firstOrCreate(

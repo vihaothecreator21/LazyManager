@@ -6,6 +6,7 @@ use App\Http\Controllers\DailySaleController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\SkuController;
+use App\Http\Controllers\StockCountController;
 use App\Http\Controllers\StockImportController;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Route;
@@ -52,5 +53,7 @@ Route::prefix('v1')->middleware(['auth.jwt', 'csrf.double_submit'])->group(funct
     Route::post('/borrow-records', [BorrowRecordController::class, 'store']);
     Route::get('/borrow-records/{borrowRecord}', [BorrowRecordController::class, 'show']);
     Route::post('/borrow-records/{borrowRecord}/return', [BorrowRecordController::class, 'returnRecord']);
+    Route::get('/stock-counts', [StockCountController::class, 'index']);
+    Route::post('/stock-counts', [StockCountController::class, 'store']);
     Route::apiResource('products', ProductController::class);
 });
