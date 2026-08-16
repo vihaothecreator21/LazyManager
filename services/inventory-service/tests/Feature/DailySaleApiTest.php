@@ -35,6 +35,8 @@ final class DailySaleApiTest extends InventoryFeatureTestCase
             'row_number',
             'sku_code',
             'sku_id',
+            'raw_product_name',
+            'raw_variant',
             'raw_sku_code',
             'raw_quantity_sold',
             'quantity_sold',
@@ -80,10 +82,37 @@ final class DailySaleApiTest extends InventoryFeatureTestCase
         self::assertSame([
             [
                 'row_number' => 2,
+                'raw_product_name' => null,
+                'raw_variant' => null,
                 'raw_sku_code' => ' ao-thun-m ',
                 'raw_quantity_sold' => '2',
                 'sku_code' => 'AO-THUN-M',
                 'quantity_sold' => 2,
+                'error_message' => null,
+            ],
+        ], $rows);
+    }
+
+    public function test_daily_sale_csv_parser_accepts_product_name_variant_template(): void
+    {
+        $path = tempnam(sys_get_temp_dir(), 'daily-sale-');
+        file_put_contents(
+            $path,
+            "TÊN,MÀU / SIZE,Số Lượng Bán\n".
+            "Áo Thun DirtyCoins Patch In Heart,Black / M,x 1\n"
+        );
+
+        $rows = app(\App\Infrastructure\CsvDailySaleParser::class)->parse($path);
+
+        self::assertSame([
+            [
+                'row_number' => 2,
+                'raw_product_name' => 'Áo Thun DirtyCoins Patch In Heart',
+                'raw_variant' => 'Black / M',
+                'raw_sku_code' => '',
+                'raw_quantity_sold' => 'x 1',
+                'sku_code' => '',
+                'quantity_sold' => 1,
                 'error_message' => null,
             ],
         ], $rows);
@@ -95,7 +124,7 @@ final class DailySaleApiTest extends InventoryFeatureTestCase
         file_put_contents($path, "sku_code,quantity\nAO-THUN-M,2\n");
 
         $this->expectException(\App\Domain\Exceptions\InventoryBusinessException::class);
-        $this->expectExceptionMessage('File CSV phải có đúng hai cột sku_code và quantity_sold.');
+        $this->expectExceptionMessage('File CSV phải có cột sku_code + quantity_sold hoặc TÊN + MÀU / SIZE + Số Lượng Bán.');
 
         app(\App\Infrastructure\CsvDailySaleParser::class)->parse($path);
     }
@@ -169,6 +198,47 @@ final class DailySaleApiTest extends InventoryFeatureTestCase
         $this->assertDatabaseHas('inventory_balances', [
             'sku_id' => $sku->id,
             'quantity' => 10,
+        ]);
+    }
+
+    public function test_create_daily_sale_matches_product_name_and_variant_then_confirm_decrements_stock(): void
+    {
+        $sku = $this->createSkuWithBalance(
+            quantity: 10,
+            skuCode: 'DC-HEART-BLACK-M',
+            productName: 'Áo Thun DirtyCoins Patch In Heart',
+            size: 'Black / M',
+        );
+
+        $this->actingWithInventoryCookie(userId: 10)
+            ->withHeaders($this->authHeaders())
+            ->post('/api/v1/daily-sales', [
+                'sales_date' => now()->toDateString(),
+                'file' => $this->csvUpload(
+                    "TÊN,MÀU / SIZE,Số Lượng Bán\n".
+                    "Áo Thun DirtyCoins Patch In Heart,Black / M,x 1\n"
+                ),
+            ])
+            ->assertCreated()
+            ->assertJsonPath('daily_sale.has_errors', false)
+            ->assertJsonPath('daily_sale.lines.0.raw_product_name', 'Áo Thun DirtyCoins Patch In Heart')
+            ->assertJsonPath('daily_sale.lines.0.raw_variant', 'Black / M')
+            ->assertJsonPath('daily_sale.lines.0.sku_code', 'DC-HEART-BLACK-M')
+            ->assertJsonPath('daily_sale.lines.0.sku_id', $sku->id)
+            ->assertJsonPath('daily_sale.lines.0.quantity_sold', 1)
+            ->assertJsonPath('daily_sale.lines.0.preview_quantity_after', 9);
+
+        $dailySale = DailySale::query()->latest('id')->firstOrFail();
+
+        $this->actingWithInventoryCookie(userId: 10)
+            ->withHeaders($this->authHeaders())
+            ->postJson("/api/v1/daily-sales/{$dailySale->id}/confirm")
+            ->assertOk()
+            ->assertJsonPath('daily_sale.status', 'CONFIRMED');
+
+        $this->assertDatabaseHas('inventory_balances', [
+            'sku_id' => $sku->id,
+            'quantity' => 9,
         ]);
     }
 
@@ -312,15 +382,21 @@ final class DailySaleApiTest extends InventoryFeatureTestCase
         return new UploadedFile($path, $name, 'text/csv', null, true);
     }
 
-    private function createSkuWithBalance(int $quantity, bool $active = true, string $skuCode = 'AO-THUN-M'): ProductSku
+    private function createSkuWithBalance(
+        int $quantity,
+        bool $active = true,
+        string $skuCode = 'AO-THUN-M',
+        string $productName = 'Áo thun',
+        string $size = 'M',
+    ): ProductSku
     {
         $product = Product::query()->firstOrCreate(
-            ['product_code' => 'AO-THUN'],
-            ['name' => 'Áo thun', 'active' => true],
+            ['product_code' => str_contains($skuCode, '-') ? substr($skuCode, 0, (int) strrpos($skuCode, '-')) : $skuCode],
+            ['name' => $productName, 'active' => true],
         );
         $sku = ProductSku::query()->firstOrCreate(
             ['sku_code' => $skuCode],
-            ['product_id' => $product->id, 'size' => 'M', 'active' => $active],
+            ['product_id' => $product->id, 'size' => $size, 'active' => $active],
         );
         // Nếu balance chưa tồn tại thì tạo, nếu có rồi thì cập nhật số lượng
         InventoryBalance::query()->updateOrCreate(

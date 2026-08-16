@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useAuth } from '../../../lib/useAuth'
+import { PageHeader } from '../../../components/PageHeader'
 import {
   cancelDailySale,
   getDailySale,
@@ -12,7 +12,6 @@ import {
 import { DailySalePreviewTable } from '../components/DailySalePreviewTable'
 
 export function DailySalesPage() {
-  const { session, logout } = useAuth()
   const [data, setData] = useState<PaginatedDailySales | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -88,28 +87,14 @@ export function DailySalesPage() {
 
   return (
     <main className="shell inv-shell">
-      <nav className="inv-topnav" aria-label="Điều hướng chính">
-        <Link className="inv-brand" to="/">LazyManager</Link>
-        <div className="inv-topnav-links">
-          <Link to="/schedule">Lịch làm việc</Link>
-          <Link to="/products">Sản phẩm</Link>
-          <Link to="/inventory">Tồn kho</Link>
-          <Link to="/daily-sales" aria-current="page">Phiếu bán</Link>
-          <Link to="/employees">Nhân viên</Link>
-          {session ? (
-            <button type="button" className="nav-logout" onClick={() => void logout()}>
-              Đăng xuất
-            </button>
-          ) : null}
-        </div>
-      </nav>
-
-      <header className="inv-page-header">
-        <div className="inv-page-title-row">
-          <h1 className="inv-page-title">Phiếu bán</h1>
+      <PageHeader
+        eyebrow="Daily sales"
+        title="Phiếu bán"
+        summary="Xem danh sách phiếu bán, mở chi tiết và hủy phiếu đã xác nhận."
+        actions={
           <Link className="link-button" to="/daily-sales/new">Tạo phiếu bán</Link>
-        </div>
-      </header>
+        }
+      />
 
       {error ? <p className="form-error">{error}</p> : null}
 

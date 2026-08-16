@@ -5,6 +5,8 @@ export type DailySaleStatus = 'DRAFT' | 'CONFIRMED' | 'CANCELLED'
 export type DailySaleLine = {
   id: number
   row_number: number
+  raw_product_name: string | null
+  raw_variant: string | null
   raw_sku_code: string | null
   raw_quantity_sold: string | null
   sku_code: string
@@ -49,6 +51,11 @@ export type PaginatedDailySales = {
   }
 }
 
+type DailySalesIndexResponse = {
+  daily_sales: DailySaleSummary[]
+  meta: PaginatedDailySales['meta']
+}
+
 export async function createDailySale(input: {
   salesDate: string
   file: File
@@ -81,11 +88,14 @@ export async function listDailySales(params?: {
   if (params?.date_to) queryParts.push(`date_to=${params.date_to}`)
 
   const queryString = queryParts.length > 0 ? `?${queryParts.join('&')}` : ''
-  const response = await apiClient<PaginatedDailySales>(
+  const response = await apiClient<DailySalesIndexResponse>(
     `/api/inventory/v1/daily-sales${queryString}`,
   )
 
-  return response
+  return {
+    data: response.daily_sales,
+    meta: response.meta,
+  }
 }
 
 export async function getDailySale(id: number): Promise<DailySale> {

@@ -6,6 +6,7 @@ use App\Application\DTOs\CreateStockImportData;
 use App\Domain\Enums\StockImportStatus;
 use App\Domain\Exceptions\InventoryBusinessException;
 use App\Infrastructure\CsvStockImportParser;
+use App\Models\Product;
 use App\Models\ProductSku;
 use App\Models\StockImport;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -51,6 +52,8 @@ final class PreviewStockImportUseCase
     /**
      * @param list<array{
      *     row_number: int,
+     *     raw_product_name: string|null,
+     *     raw_variant: string|null,
      *     raw_sku_code: string,
      *     raw_quantity: string,
      *     sku_code: string,
@@ -80,6 +83,14 @@ final class PreviewStockImportUseCase
                 $error = 'SKU đã ngừng hoạt động.';
             }
 
+            if ($error !== null && ! $sku instanceof ProductSku && $row['sku_code'] !== '' && $row['quantity'] !== null && trim((string) $row['raw_product_name']) !== '') {
+                $productCode = $this->productCodeFromSku($row['sku_code']);
+                $product = Product::withTrashed()->where('product_code', $productCode)->first();
+                $error = $product instanceof Product && ($product->trashed() || ! $product->active)
+                    ? 'Sản phẩm đã ngừng hoạt động.'
+                    : null;
+            }
+
             if ($row['sku_code'] !== '') {
                 $seenSkuCodes[$row['sku_code']] = true;
             }
@@ -94,10 +105,15 @@ final class PreviewStockImportUseCase
 
                 $quantityBefore = $sku->balance->quantity;
                 $quantityAfter = $row['quantity'];
+            } elseif ($error === null) {
+                $quantityBefore = 0;
+                $quantityAfter = $row['quantity'];
             }
 
             $resolved[] = [
                 'row_number' => $row['row_number'],
+                'raw_product_name' => $row['raw_product_name'],
+                'raw_variant' => $row['raw_variant'],
                 'raw_sku_code' => $row['raw_sku_code'],
                 'raw_quantity' => $row['raw_quantity'],
                 'sku_code' => $row['sku_code'],
@@ -110,5 +126,16 @@ final class PreviewStockImportUseCase
         }
 
         return $resolved;
+    }
+
+    private function productCodeFromSku(string $skuCode): string
+    {
+        foreach (['XXXL', 'XXL', 'XL', 'XS', 'S', 'M', 'L'] as $suffix) {
+            if (str_ends_with($skuCode, $suffix)) {
+                return substr($skuCode, 0, -strlen($suffix));
+            }
+        }
+
+        return $skuCode;
     }
 }

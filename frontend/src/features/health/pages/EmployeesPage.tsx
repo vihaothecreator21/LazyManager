@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { PageHeader } from '../../../components/PageHeader'
 import { useAuth } from '../../../lib/useAuth'
 import {
   createEmployee,
@@ -21,7 +21,7 @@ const emptyForm: EmployeePayload = {
 }
 
 export function EmployeesPage() {
-  const { logout, session } = useAuth()
+  const { session } = useAuth()
   const isManager = session?.user.role === 'STORE_MANAGER'
   const [employees, setEmployees] = useState<Employee[]>([])
   const [form, setForm] = useState<EmployeePayload>(emptyForm)
@@ -108,24 +108,11 @@ export function EmployeesPage() {
 
   return (
     <main className="shell">
-      <section className="overview" aria-labelledby="employees-title">
-        <div>
-          <p className="eyebrow">People</p>
-          <h1 id="employees-title">Nhân viên</h1>
-          <p className="summary">
-            Quản lý tài khoản nhân viên, vai trò và trạng thái đăng nhập trong
-            LazyManager.
-          </p>
-        </div>
-        <div className="actions">
-          <Link className="link-button" to="/">
-            Dashboard
-          </Link>
-          <button type="button" className="btn-danger" onClick={logout}>
-            Đăng xuất
-          </button>
-        </div>
-      </section>
+      <PageHeader
+        eyebrow="People"
+        title="Nhân viên"
+        summary="Quản lý tài khoản, vai trò và trạng thái đăng nhập trong LazyManager."
+      />
 
       <section
         className="employee-grid"

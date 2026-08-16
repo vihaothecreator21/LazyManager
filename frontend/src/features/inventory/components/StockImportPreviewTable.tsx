@@ -15,12 +15,10 @@ export function StockImportPreviewTable({ lines }: StockImportPreviewTableProps)
         <thead>
           <tr>
             <th>Dòng</th>
+            <th>Tên sản phẩm</th>
+            <th>Biến thể</th>
             <th>Mã SKU</th>
-            <th>SKU gốc</th>
-            <th>Số lượng gốc</th>
-            <th>Tồn trước</th>
-            <th>Số lượng mới</th>
-            <th>Tồn sau</th>
+            <th>Số lượng</th>
             <th>Lỗi</th>
           </tr>
         </thead>
@@ -31,12 +29,10 @@ export function StockImportPreviewTable({ lines }: StockImportPreviewTableProps)
               key={line.id}
             >
               <td>{line.row_number}</td>
+              <td>{line.raw_product_name || 'Chưa có'}</td>
+              <td>{line.raw_variant || 'Chưa có'}</td>
               <td className="inv-cell-code">{line.sku_code || 'Chưa có'}</td>
-              <td>{line.raw_sku_code || 'Trống'}</td>
-              <td>{line.raw_quantity || 'Trống'}</td>
-              <td className="inv-cell-qty">{line.quantity_before ?? '-'}</td>
               <td className="inv-cell-qty">{line.quantity ?? '-'}</td>
-              <td className="inv-cell-qty">{line.quantity_after ?? '-'}</td>
               <td>
                 <span className={line.error_message ? 'inv-import-error' : 'inv-import-ok'}>
                   {line.error_message ?? 'Hợp lệ'}

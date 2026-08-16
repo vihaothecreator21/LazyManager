@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useAuth } from '../../../lib/useAuth'
+import { PageHeader } from '../../../components/PageHeader'
 import { listEmployees, type Employee } from '../../health/api/employeesApi'
 import {
   createScheduleDayOff,
@@ -30,7 +30,6 @@ type DayOffForm = {
 const initialWeekStart = mondayOf(new Date())
 
 export function SchedulePage() {
-  const { logout } = useAuth()
   const [weekStart, setWeekStart] = useState(initialWeekStart)
   const [schedule, setSchedule] = useState<WeekSchedule | null>(null)
   const [employees, setEmployees] = useState<Employee[]>([])
@@ -156,26 +155,16 @@ export function SchedulePage() {
 
   return (
     <main className="shell schedule-shell">
-      <section className="overview" aria-labelledby="schedule-title">
-        <div>
-          <p className="eyebrow">Schedule</p>
-          <h1 id="schedule-title">Lịch làm việc</h1>
-          <p className="summary">
-            Bảng tuần gồm ca sáng, ca chiều và danh sách nhân viên OFF theo từng ngày.
-          </p>
-        </div>
-        <div className="actions">
-          <Link className="link-button" to="/">
-            Dashboard
-          </Link>
+      <PageHeader
+        eyebrow="Schedule"
+        title="Lịch làm việc"
+        summary="Bảng tuần gồm ca sáng, ca chiều và danh sách nhân viên OFF theo từng ngày."
+        actions={
           <Link className="link-button" to="/employees">
             Nhân viên
           </Link>
-          <button type="button" className="btn-danger" onClick={logout}>
-            Đăng xuất
-          </button>
-        </div>
-      </section>
+        }
+      />
 
       <section className="schedule-tools" aria-label="Điều khiển lịch">
         <label>

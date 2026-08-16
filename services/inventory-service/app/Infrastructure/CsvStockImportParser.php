@@ -9,6 +9,8 @@ final class CsvStockImportParser
     /**
      * @return list<array{
      *     row_number: int,
+     *     raw_product_name: string|null,
+     *     raw_variant: string|null,
      *     raw_sku_code: string,
      *     raw_quantity: string,
      *     sku_code: string,
@@ -26,16 +28,16 @@ final class CsvStockImportParser
 
         try {
             $header = fgetcsv($handle);
-            $normalizedHeader = is_array($header)
-                ? array_map(fn ($value): string => strtolower(trim((string) $value)), $header)
-                : null;
+            $format = is_array($header) ? $this->resolveFormat($header, $handle) : null;
 
-            if ($normalizedHeader !== ['sku_code', 'quantity']) {
-                throw new InventoryBusinessException('File CSV phải có đúng hai cột sku_code và quantity.');
+            if ($format === null) {
+                throw new InventoryBusinessException(
+                    'File CSV phải có cột sku_code + quantity hoặc SKU + Tồn kho.'
+                );
             }
 
             $rows = [];
-            $rowNumber = 1;
+            $rowNumber = $format['data_starts_after_row'];
 
             while (($columns = fgetcsv($handle)) !== false) {
                 $rowNumber++;
@@ -44,7 +46,14 @@ final class CsvStockImportParser
                     continue;
                 }
 
-                $rows[] = $this->parseRow($columns, $rowNumber);
+                $rows[] = $this->parseRow(
+                    $columns,
+                    $rowNumber,
+                    $format['sku_index'],
+                    $format['quantity_index'],
+                    $format['product_name_index'],
+                    $format['variant_index'],
+                );
             }
 
             return $rows;
@@ -58,6 +67,8 @@ final class CsvStockImportParser
      *
      * @return array{
      *     row_number: int,
+     *     raw_product_name: string|null,
+     *     raw_variant: string|null,
      *     raw_sku_code: string,
      *     raw_quantity: string,
      *     sku_code: string,
@@ -65,10 +76,19 @@ final class CsvStockImportParser
      *     error_message: string|null
      * }
      */
-    private function parseRow(array $columns, int $rowNumber): array
+    private function parseRow(
+        array $columns,
+        int $rowNumber,
+        int $skuIndex,
+        int $quantityIndex,
+        ?int $productNameIndex = null,
+        ?int $variantIndex = null,
+    ): array
     {
-        $rawSkuCode = (string) ($columns[0] ?? '');
-        $rawQuantity = (string) ($columns[1] ?? '');
+        $rawProductName = $productNameIndex === null ? null : (string) ($columns[$productNameIndex] ?? '');
+        $rawVariant = $variantIndex === null ? null : (string) ($columns[$variantIndex] ?? '');
+        $rawSkuCode = (string) ($columns[$skuIndex] ?? '');
+        $rawQuantity = (string) ($columns[$quantityIndex] ?? '');
         $skuCode = strtoupper(trim($rawSkuCode));
         $trimmedQuantity = trim($rawQuantity);
         $quantity = null;
@@ -86,11 +106,107 @@ final class CsvStockImportParser
 
         return [
             'row_number' => $rowNumber,
+            'raw_product_name' => $rawProductName === null ? null : trim($rawProductName),
+            'raw_variant' => $rawVariant === null ? null : trim($rawVariant),
             'raw_sku_code' => $rawSkuCode,
             'raw_quantity' => $rawQuantity,
             'sku_code' => $skuCode,
             'quantity' => $quantity,
             'error_message' => $error,
         ];
+    }
+
+    /**
+     * @param list<string|null> $header
+     *
+     * @return array{sku_index: int, quantity_index: int, product_name_index: int|null, variant_index: int|null, data_starts_after_row: int}|null
+     */
+    private function resolveFormat(array $header, mixed $handle): ?array
+    {
+        $singleRowFormat = $this->resolveHeaderIndexes($header);
+
+        if ($singleRowFormat !== null) {
+            return [...$singleRowFormat, 'data_starts_after_row' => 1];
+        }
+
+        $secondHeader = fgetcsv($handle);
+
+        if (! is_array($secondHeader)) {
+            return null;
+        }
+
+        $skuIndex = $this->findHeaderIndex($header, ['mã sku', 'ma sku', 'sku']);
+        $quantityIndex = $this->findHeaderIndex($secondHeader, ['tồn kho', 'ton kho']);
+
+        if ($skuIndex === null || $quantityIndex === null) {
+            return null;
+        }
+
+        return [
+            'sku_index' => $skuIndex,
+            'quantity_index' => $quantityIndex,
+            'product_name_index' => $this->findHeaderIndex($header, [
+                'tên phiên bản',
+                'ten phien ban',
+                'tên sản phẩm',
+                'ten san pham',
+            ]),
+            'variant_index' => null,
+            'data_starts_after_row' => 2,
+        ];
+    }
+
+    /**
+     * @param list<string|null> $header
+     *
+     * @return array{sku_index: int, quantity_index: int, product_name_index: int|null, variant_index: int|null}|null
+     */
+    private function resolveHeaderIndexes(array $header): ?array
+    {
+        $skuIndex = $this->findHeaderIndex($header, ['sku_code', 'mã sku', 'ma sku', 'sku']);
+        $quantityIndex = $this->findHeaderIndex($header, ['quantity', 'tồn kho', 'ton kho']);
+
+        if ($skuIndex === null || $quantityIndex === null) {
+            return null;
+        }
+
+        return [
+            'sku_index' => $skuIndex,
+            'quantity_index' => $quantityIndex,
+            'product_name_index' => $this->findHeaderIndex($header, [
+                'tên sản phẩm',
+                'ten san pham',
+                'tên phiên bản',
+                'ten phien ban',
+            ]),
+            'variant_index' => $this->findHeaderIndex($header, [
+                'biến thể',
+                'bien the',
+                'variant',
+            ]),
+        ];
+    }
+
+    /**
+     * @param list<string|null> $header
+     * @param list<string> $acceptedNames
+     */
+    private function findHeaderIndex(array $header, array $acceptedNames): ?int
+    {
+        foreach ($header as $index => $value) {
+            if (in_array($this->normalizeHeader((string) $value), $acceptedNames, true)) {
+                return $index;
+            }
+        }
+
+        return null;
+    }
+
+    private function normalizeHeader(string $value): string
+    {
+        $value = preg_replace('/^\xEF\xBB\xBF/', '', trim($value)) ?? '';
+        $value = function_exists('mb_strtolower') ? mb_strtolower($value, 'UTF-8') : strtolower($value);
+
+        return preg_replace('/\s+/u', ' ', $value) ?? $value;
     }
 }

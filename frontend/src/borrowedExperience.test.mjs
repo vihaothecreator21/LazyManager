@@ -13,7 +13,7 @@ const api = readFileSync(
 
 assert.match(app, /path="\/borrowed"/)
 assert.doesNotMatch(app, /<RequireManager>\s*<BorrowedPage/)
-assert.match(dashboard, /to="\/borrowed"/)
+assert.match(dashboard, /to: '\/borrowed'/)
 assert.match(api, /listBorrowRecords/)
 assert.match(api, /createBorrowRecord/)
 assert.match(api, /returnBorrowRecord/)

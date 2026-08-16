@@ -1,6 +1,6 @@
 import { Route, Routes } from 'react-router-dom'
 import './App.css'
-import { RequireAuth } from './features/auth/components/RequireAuth'
+import { RequireManager } from './features/auth/components/RequireManager'
 import { LoginPage } from './features/auth/pages/LoginPage'
 import { DashboardPage } from './features/health/pages/DashboardPage'
 import { EmployeesPage } from './features/health/pages/EmployeesPage'
@@ -17,19 +17,19 @@ function App() {
   return (
     <Routes>
       {/* Public */}
+      <Route path="/" element={<DashboardPage />} />
+      <Route path="/schedule" element={<ScheduleGridPage />} />
+      <Route path="/products" element={<ProductsPage />} />
+      <Route path="/inventory" element={<InventoryPage />} />
+      <Route path="/inventory/import" element={<StockImportPage />} />
+      <Route path="/daily-sales" element={<DailySalesPage />} />
+      <Route path="/daily-sales/new" element={<NewDailySalePage />} />
+      <Route path="/borrowed" element={<BorrowedPage />} />
+      <Route path="/stock-counts" element={<StockCountsPage />} />
       <Route path="/login" element={<LoginPage />} />
 
-      {/* Auth required */}
-      <Route element={<RequireAuth />}>
-        <Route path="/" element={<DashboardPage />} />
-        <Route path="/schedule" element={<ScheduleGridPage />} />
-        <Route path="/products" element={<ProductsPage />} />
-        <Route path="/inventory" element={<InventoryPage />} />
-        <Route path="/inventory/import" element={<StockImportPage />} />
-        <Route path="/daily-sales" element={<DailySalesPage />} />
-        <Route path="/daily-sales/new" element={<NewDailySalePage />} />
-        <Route path="/borrowed" element={<BorrowedPage />} />
-        <Route path="/stock-counts" element={<StockCountsPage />} />
+      {/* Manager required */}
+      <Route element={<RequireManager />}>
         <Route path="/employees" element={<EmployeesPage />} />
       </Route>
     </Routes>

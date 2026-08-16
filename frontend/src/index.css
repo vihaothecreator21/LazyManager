@@ -1,27 +1,32 @@
 :root {
-  --bg: #f4f6f1;
-  --surface: #fbfcf8;
-  --surface-strong: #edf2e8;
-  --surface-inset: #e4eadf;
-  --border: #cfd7ca;
-  --text: #2d342e;
-  --text-strong: #111811;
-  --muted: #5f6a61;
-  --button-bg: #245d45;
-  --button-bg-hover: #1c4c38;
-  --button-border: #17442f;
+  --bg: #08083f;
+  --surface: #141457;
+  --surface-strong: #1c1a70;
+  --surface-inset: #0d0c4a;
+  --border: rgba(158, 151, 255, 0.22);
+  --text: #d8dcff;
+  --text-strong: #ffffff;
+  --muted: #9ca4df;
+  --button-bg: #7b2cff;
+  --button-bg-hover: #9a35ff;
+  --button-border: rgba(184, 132, 255, 0.58);
   --button-text: #ffffff;
-  --success: #247451;
-  --success-bg: #dceee5;
-  --success-text: #135135;
-  --warning: #a2701a;
-  --warning-bg: #f4e6c1;
-  --warning-text: #62450d;
-  --error-bg: #f2dede;
-  --error-text: #842c2c;
-  --neutral-bg: #e5e9e1;
-  --neutral-text: #4b554d;
-  --shadow: 0 24px 70px rgba(49, 64, 45, 0.13);
+  --success: #29c7e6;
+  --success-bg: rgba(41, 199, 230, 0.13);
+  --success-text: #68e5ff;
+  --warning: #ff9f43;
+  --warning-bg: rgba(255, 159, 67, 0.14);
+  --warning-text: #ffc071;
+  --error-bg: rgba(255, 98, 120, 0.14);
+  --error-text: #ff7b91;
+  --neutral-bg: rgba(255, 255, 255, 0.08);
+  --neutral-text: #b5bae8;
+  --shadow: 0 24px 74px rgba(0, 0, 30, 0.42);
+  --glass-surface: linear-gradient(180deg, rgba(35, 34, 118, 0.84), rgba(20, 20, 87, 0.9));
+  --glass-inset: rgba(9, 9, 61, 0.58);
+  --accent-cyan: #2fb7ff;
+  --accent-orange: #ff8a3d;
+  --display: 'Segoe UI Variable Display', Aptos Display, Aptos, ui-sans-serif, system-ui, sans-serif;
   --sans: Aptos, 'Segoe UI Variable', ui-sans-serif, system-ui, sans-serif;
   --mono: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
 
@@ -43,7 +48,9 @@ body {
   min-height: 100dvh;
   margin: 0;
   background:
-    linear-gradient(135deg, rgba(36, 93, 69, 0.08), transparent 34%),
+    radial-gradient(circle at 18% 0%, rgba(123, 44, 255, 0.34), transparent 32%),
+    radial-gradient(circle at 82% 18%, rgba(47, 183, 255, 0.2), transparent 28%),
+    linear-gradient(135deg, rgba(35, 44, 106, 0.68), transparent 40%),
     var(--bg);
 }
 

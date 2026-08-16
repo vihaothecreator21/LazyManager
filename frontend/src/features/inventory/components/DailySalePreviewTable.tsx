@@ -15,6 +15,8 @@ export function DailySalePreviewTable({ lines }: DailySalePreviewTableProps) {
         <thead>
           <tr>
             <th>Dòng</th>
+            <th>Tên sản phẩm</th>
+            <th>Màu / Size</th>
             <th>Mã SKU</th>
             <th>SKU gốc</th>
             <th>Số lượng bán gốc</th>
@@ -31,6 +33,8 @@ export function DailySalePreviewTable({ lines }: DailySalePreviewTableProps) {
               key={line.id}
             >
               <td>{line.row_number}</td>
+              <td>{line.raw_product_name || '-'}</td>
+              <td>{line.raw_variant || '-'}</td>
               <td className="inv-cell-code">{line.sku_code || 'Chưa có'}</td>
               <td>{line.raw_sku_code || 'Trống'}</td>
               <td>{line.raw_quantity_sold || 'Trống'}</td>

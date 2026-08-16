@@ -29,6 +29,8 @@ final class StockImportApiTest extends InventoryFeatureTestCase
             'row_number',
             'sku_code',
             'sku_id',
+            'raw_product_name',
+            'raw_variant',
             'raw_sku_code',
             'raw_quantity',
             'quantity',
@@ -83,6 +85,8 @@ final class StockImportApiTest extends InventoryFeatureTestCase
         self::assertSame([
             [
                 'row_number' => 2,
+                'raw_product_name' => null,
+                'raw_variant' => null,
                 'raw_sku_code' => ' ao-thun-m ',
                 'raw_quantity' => '12',
                 'sku_code' => 'AO-THUN-M',
@@ -92,13 +96,57 @@ final class StockImportApiTest extends InventoryFeatureTestCase
         ], $rows);
     }
 
+    public function test_csv_parser_accepts_product_export_template(): void
+    {
+        $path = tempnam(sys_get_temp_dir(), 'stock-import-');
+        file_put_contents(
+            $path,
+            "TÊN SẢN PHẨM,BIẾN THỂ,SKU,Tồn kho\n".
+            "Áo Thun DCxRS Big Logo,Cái / Black / L, at1297del ,2\n"
+        );
+
+        $rows = app(\App\Infrastructure\CsvStockImportParser::class)->parse($path);
+
+        self::assertSame([
+            [
+                'row_number' => 2,
+                'raw_product_name' => 'Áo Thun DCxRS Big Logo',
+                'raw_variant' => 'Cái / Black / L',
+                'raw_sku_code' => ' at1297del ',
+                'raw_quantity' => '2',
+                'sku_code' => 'AT1297DEL',
+                'quantity' => 2,
+                'error_message' => null,
+            ],
+        ], $rows);
+    }
+
+    public function test_csv_parser_accepts_google_sheet_two_row_stock_template(): void
+    {
+        $path = tempnam(sys_get_temp_dir(), 'stock-import-');
+        file_put_contents(
+            $path,
+            "Tên phiên bản,Mã SKU,S561SVH\n".
+            ",,Tồn kho,Xào + Kệ,Kho,Thực tế\n".
+            "Áo Thun DCxRS Big Logo, at1297del ,2,1,1,\n"
+        );
+
+        $rows = app(\App\Infrastructure\CsvStockImportParser::class)->parse($path);
+
+        self::assertSame('AT1297DEL', $rows[0]['sku_code']);
+        self::assertSame('Áo Thun DCxRS Big Logo', $rows[0]['raw_product_name']);
+        self::assertNull($rows[0]['raw_variant']);
+        self::assertSame(2, $rows[0]['quantity']);
+        self::assertSame(3, $rows[0]['row_number']);
+    }
+
     public function test_csv_parser_rejects_wrong_header(): void
     {
         $path = tempnam(sys_get_temp_dir(), 'stock-import-');
         file_put_contents($path, "code,qty\nAO-THUN-M,12\n");
 
         $this->expectException(\App\Domain\Exceptions\InventoryBusinessException::class);
-        $this->expectExceptionMessage('File CSV phải có đúng hai cột sku_code và quantity.');
+        $this->expectExceptionMessage('File CSV phải có cột sku_code + quantity hoặc SKU + Tồn kho.');
 
         app(\App\Infrastructure\CsvStockImportParser::class)->parse($path);
     }
@@ -123,13 +171,17 @@ final class StockImportApiTest extends InventoryFeatureTestCase
         $this->actingWithInventoryCookie(userId: 10)
             ->withHeaders($this->authHeaders())
             ->post('/api/v1/stock-imports', [
-                'file' => $this->csvUpload("sku_code,quantity\nAO-THUN-M,12\n"),
+                'file' => $this->csvUpload(
+                    "TÊN SẢN PHẨM,BIẾN THỂ,SKU,Tồn kho\n".
+                    "Áo thun,Cái / Black / M,AO-THUN-M,12\n"
+                ),
             ])
             ->assertCreated()
             ->assertJsonPath('stock_import.status', 'PREVIEWED')
             ->assertJsonPath('stock_import.has_errors', false)
             ->assertJsonPath('stock_import.created_by', 10)
             ->assertJsonPath('stock_import.lines.0.sku_code', 'AO-THUN-M')
+            ->assertJsonPath('stock_import.lines.0.raw_product_name', 'Áo thun')
             ->assertJsonPath('stock_import.lines.0.sku_id', $sku->id)
             ->assertJsonPath('stock_import.lines.0.quantity_before', 5)
             ->assertJsonPath('stock_import.lines.0.quantity_after', 12);
@@ -276,6 +328,91 @@ final class StockImportApiTest extends InventoryFeatureTestCase
             'reference_id' => (string) $stockImport->id,
             'reason' => 'Đồng bộ tồn kho từ file CSV.',
             'created_by' => 10,
+        ]);
+    }
+
+    public function test_confirm_auto_creates_missing_product_and_sku_from_import_row(): void
+    {
+        $this->actingWithInventoryCookie(userId: 10)
+            ->withHeaders($this->authHeaders())
+            ->post('/api/v1/stock-imports', [
+                'file' => $this->csvUpload(
+                    "TÊN SẢN PHẨM,BIẾN THỂ,SKU,Tồn kho,Xào,Kho,Thực Tế\n".
+                    "Áo khoác Flannel DCxRS Western Rivet,Cái / Brown / M,AS1315NAM,1,1,,0\n".
+                    "Áo khoác Flannel DCxRS Western Rivet,Cái / Brown / L,AS1315NAL,3,,3,0\n"
+                ),
+            ])
+            ->assertCreated()
+            ->assertJsonPath('stock_import.has_errors', false)
+            ->assertJsonPath('stock_import.lines.0.sku_id', null)
+            ->assertJsonPath('stock_import.lines.0.quantity_before', 0)
+            ->assertJsonPath('stock_import.lines.0.quantity_after', 1);
+
+        $stockImport = StockImport::query()->latest('id')->firstOrFail();
+
+        $this->actingWithInventoryCookie(userId: 10)
+            ->withHeaders($this->authHeaders())
+            ->postJson("/api/v1/stock-imports/{$stockImport->id}/confirm")
+            ->assertOk()
+            ->assertJsonPath('stock_import.status', 'CONFIRMED');
+
+        $this->assertDatabaseHas('products', [
+            'product_code' => 'AS1315NA',
+            'name' => 'Áo khoác Flannel DCxRS Western Rivet',
+        ]);
+
+        $product = Product::query()->where('product_code', 'AS1315NA')->firstOrFail();
+        $sku = ProductSku::query()->where('sku_code', 'AS1315NAM')->firstOrFail();
+
+        self::assertSame($product->id, $sku->product_id);
+        self::assertSame('Cái / Brown / M', $sku->size);
+        $this->assertDatabaseHas('inventory_balances', [
+            'sku_id' => $sku->id,
+            'quantity' => 1,
+        ]);
+        $this->assertDatabaseHas('inventory_transactions', [
+            'sku_id' => $sku->id,
+            'type' => 'IMPORT_SYNC',
+            'quantity_before' => 0,
+            'quantity_change' => 1,
+            'quantity_after' => 1,
+            'reference_type' => 'stock_import',
+            'reference_id' => (string) $stockImport->id,
+        ]);
+        $this->assertDatabaseHas('product_skus', [
+            'product_id' => $product->id,
+            'sku_code' => 'AS1315NAL',
+            'size' => 'Cái / Brown / L',
+        ]);
+    }
+
+    public function test_confirm_keeps_full_sku_as_product_code_when_size_suffix_is_ambiguous(): void
+    {
+        $this->actingWithInventoryCookie(userId: 10)
+            ->withHeaders($this->authHeaders())
+            ->post('/api/v1/stock-imports', [
+                'file' => $this->csvUpload(
+                    "TÊN SẢN PHẨM,BIẾN THỂ,SKU,Tồn kho\n".
+                    "Áo Thun DCxRS Big Logo,Cái / Black / L,AT1297DEL,2\n"
+                ),
+            ])
+            ->assertCreated()
+            ->assertJsonPath('stock_import.has_errors', false);
+
+        $stockImport = StockImport::query()->latest('id')->firstOrFail();
+
+        $this->actingWithInventoryCookie(userId: 10)
+            ->withHeaders($this->authHeaders())
+            ->postJson("/api/v1/stock-imports/{$stockImport->id}/confirm")
+            ->assertOk();
+
+        $this->assertDatabaseHas('products', [
+            'product_code' => 'AT1297DEL',
+            'name' => 'Áo Thun DCxRS Big Logo',
+        ]);
+        $this->assertDatabaseHas('product_skus', [
+            'sku_code' => 'AT1297DEL',
+            'size' => 'Cái / Black / L',
         ]);
     }
 

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useAuth } from '../../../lib/useAuth'
+import { PageHeader } from '../../../components/PageHeader'
 import {
   confirmDailySale,
   createDailySale,
@@ -9,7 +9,6 @@ import {
 import { DailySalePreviewTable } from '../components/DailySalePreviewTable'
 
 export function NewDailySalePage() {
-  const { session, logout } = useAuth()
   const [salesDate, setSalesDate] = useState(() => {
     const d = new Date()
     d.setDate(d.getDate() - 1)
@@ -73,27 +72,15 @@ export function NewDailySalePage() {
 
   return (
     <main className="shell inv-shell">
-      <nav className="inv-topnav" aria-label="Điều hướng chính">
-        <Link className="inv-brand" to="/">LazyManager</Link>
-        <div className="inv-topnav-links">
-          <Link to="/schedule">Lịch làm việc</Link>
-          <Link to="/products">Sản phẩm</Link>
-          <Link to="/inventory">Tồn kho</Link>
-          <Link to="/daily-sales" aria-current="page">Phiếu bán</Link>
-          <Link to="/employees">Nhân viên</Link>
-          {session ? (
-            <button type="button" className="nav-logout" onClick={() => void logout()}>
-              Đăng xuất
-            </button>
-          ) : null}
-        </div>
-      </nav>
-
-      <header className="inv-page-header">
-        <div className="inv-page-title-row">
-          <h1 className="inv-page-title">Phiếu bán hằng ngày</h1>
+      <PageHeader
+        eyebrow="Daily sales"
+        title="Phiếu bán hằng ngày"
+        summary="Import CSV bán hàng, xác nhận một lần để trừ tồn bằng ledger SALE."
+        actions={
           <Link className="link-button" to="/daily-sales">Danh sách</Link>
-        </div>
+        }
+      />
+      <header className="inv-page-header">
         <p className="inv-import-help">File phải có cột sku_code và quantity_sold.</p>
       </header>
 

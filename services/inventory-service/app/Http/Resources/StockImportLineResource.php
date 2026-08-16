@@ -15,6 +15,8 @@ final class StockImportLineResource extends JsonResource
         return [
             'id' => $this->id,
             'row_number' => $this->row_number,
+            'raw_product_name' => $this->raw_product_name,
+            'raw_variant' => $this->raw_variant,
             'raw_sku_code' => $this->raw_sku_code,
             'raw_quantity' => $this->raw_quantity,
             'sku_code' => $this->sku_code,

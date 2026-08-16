@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
-import { useAuth } from '../../../lib/useAuth'
+import { PageHeader } from '../../../components/PageHeader'
 import {
   createStockCount,
   getStockCount,
@@ -44,7 +43,6 @@ function buildDrafts(stockCount: StockCount | null): Record<number, DraftLine> {
 }
 
 export function StockCountsPage() {
-  const { session, logout } = useAuth()
   const [items, setItems] = useState<StockCount[]>([])
   const [selected, setSelected] = useState<StockCount | null>(null)
   const [drafts, setDrafts] = useState<Record<number, DraftLine>>({})
@@ -165,30 +163,11 @@ export function StockCountsPage() {
 
   return (
     <main className="shell inv-shell stock-count-shell">
-      <nav className="inv-topnav" aria-label="Điều hướng chính">
-        <Link className="inv-brand" to="/">LazyManager</Link>
-        <div className="inv-topnav-links">
-          <Link to="/schedule">Lịch làm việc</Link>
-          <Link to="/products">Sản phẩm</Link>
-          <Link to="/inventory">Tồn kho</Link>
-          <Link to="/inventory/import">Nhập tồn kho</Link>
-          <Link to="/daily-sales">Phiếu bán</Link>
-          <Link to="/borrowed">Hàng mượn</Link>
-          <Link to="/stock-counts" aria-current="page">Kiểm kho</Link>
-          <Link to="/employees">Nhân viên</Link>
-          {session ? (
-            <button type="button" className="nav-logout" onClick={() => void logout()}>
-              Đăng xuất
-            </button>
-          ) : null}
-        </div>
-      </nav>
-
-      <header className="inv-page-header">
-        <div className="inv-page-title-row">
-          <h1 className="inv-page-title">Phiên kiểm kho</h1>
-        </div>
-      </header>
+      <PageHeader
+        eyebrow="Stock count"
+        title="Phiên kiểm kho"
+        summary="Tạo snapshot tồn kho, nhập actual, xem variance và tải CSV."
+      />
 
       <section className="stock-count-layout">
         <aside className="inv-panel stock-count-side" aria-label="Danh sách phiên kiểm kho">

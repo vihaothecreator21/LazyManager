@@ -3,6 +3,8 @@ import { apiClient } from '../../../lib/apiClient'
 export type StockImportLine = {
   id: number
   row_number: number
+  raw_product_name: string | null
+  raw_variant: string | null
   raw_sku_code: string | null
   raw_quantity: string | null
   sku_code: string
