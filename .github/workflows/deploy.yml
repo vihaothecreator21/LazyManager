@@ -1,0 +1,109 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Package release
+        run: |
+          tar \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='frontend/node_modules' \
+            --exclude='frontend/dist' \
+            --exclude='services/*/vendor' \
+            --exclude='services/*/node_modules' \
+            -czf /tmp/lazymanager-release.tgz .
+
+      - name: Configure SSH
+        env:
+          SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SERVER_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts
+
+      - name: Create production env file
+        env:
+          GATEWAY_PORT: ${{ vars.GATEWAY_PORT || '8080' }}
+          PEOPLE_APP_KEY: ${{ secrets.PEOPLE_APP_KEY }}
+          INVENTORY_APP_KEY: ${{ secrets.INVENTORY_APP_KEY }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+        run: |
+          cat > /tmp/lazymanager.env <<ENV
+          COMPOSE_PROJECT_NAME=lazymanager
+          GATEWAY_PORT=$GATEWAY_PORT
+          POSTGRES_USER=lazymanager
+          POSTGRES_PASSWORD=$POSTGRES_PASSWORD
+          PEOPLE_DB=people_db
+          INVENTORY_DB=inventory_db
+          PEOPLE_APP_KEY=$PEOPLE_APP_KEY
+          INVENTORY_APP_KEY=$INVENTORY_APP_KEY
+          CACHE_STORE=file
+          QUEUE_CONNECTION=sync
+          SESSION_DRIVER=file
+          JWT_SECRET=$JWT_SECRET
+          JWT_ISSUER=lazymanager-people-service
+          JWT_AUDIENCE=lazymanager
+          JWT_TTL_MINUTES=15
+          AUTH_ACCESS_COOKIE=lm_access_token
+          AUTH_REFRESH_COOKIE=lm_refresh_token
+          AUTH_CSRF_COOKIE=lm_csrf_token
+          AUTH_ACCESS_TTL_MINUTES=15
+          AUTH_REFRESH_TTL_MINUTES=10080
+          AUTH_COOKIE_SECURE=true
+          AUTH_COOKIE_SAME_SITE=lax
+          RUN_DEMO_SEEDERS=false
+          ADMIN_PASSWORD=$ADMIN_PASSWORD
+          ENV
+
+      - name: Upload release
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+        run: |
+          scp /tmp/lazymanager-release.tgz "$SERVER_USER@$SERVER_HOST:/tmp/lazymanager-release.tgz"
+          scp /tmp/lazymanager.env "$SERVER_USER@$SERVER_HOST:/tmp/lazymanager.env"
+
+      - name: Deploy on server
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          DEPLOY_PATH: ${{ vars.DEPLOY_PATH || '/opt/lazymanager' }}
+          GATEWAY_PORT: ${{ vars.GATEWAY_PORT || '8080' }}
+        run: |
+          ssh "$SERVER_USER@$SERVER_HOST" \
+            "DEPLOY_PATH='$DEPLOY_PATH' \
+             GATEWAY_PORT='$GATEWAY_PORT' \
+             bash -s" <<'REMOTE'
+          set -euo pipefail
+
+          mkdir -p "$DEPLOY_PATH"
+          tar -xzf /tmp/lazymanager-release.tgz -C "$DEPLOY_PATH"
+          cd "$DEPLOY_PATH"
+          mv /tmp/lazymanager.env .env
+          chmod 600 .env
+
+          docker compose up -d --build
+          docker compose exec -T people-service php artisan migrate --force
+          docker compose exec -T inventory-service php artisan migrate --force
+          curl -fsS "http://localhost:${GATEWAY_PORT}/api/people/ready"
+          curl -fsS "http://localhost:${GATEWAY_PORT}/api/inventory/ready"
+          REMOTE

@@ -18,7 +18,7 @@ export function LoginForm({ onLoginSuccess }: LoginFormProps) {
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: 'manager@example.com',
+      email: '',
       password: '',
     },
   })

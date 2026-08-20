@@ -39,7 +39,7 @@ services:
       DB_PORT: "5432"
       DB_DATABASE: people_db
       DB_USERNAME: lazymanager
-      DB_PASSWORD: lazymanager
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-lazymanager}
       QUEUE_CONNECTION: sync
       SESSION_DRIVER: file
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
@@ -78,7 +78,7 @@ services:
       DB_PORT: "5432"
       DB_DATABASE: inventory_db
       DB_USERNAME: lazymanager
-      DB_PASSWORD: lazymanager
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-lazymanager}
       QUEUE_CONNECTION: sync
       SESSION_DRIVER: file
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
@@ -99,7 +99,7 @@ services:
     environment:
       POSTGRES_DB: people_db
       POSTGRES_USER: lazymanager
-      POSTGRES_PASSWORD: lazymanager
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lazymanager}
     volumes:
       - people-db-data:/var/lib/postgresql/data
     healthcheck:
@@ -116,7 +116,7 @@ services:
     environment:
       POSTGRES_DB: inventory_db
       POSTGRES_USER: lazymanager
-      POSTGRES_PASSWORD: lazymanager
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lazymanager}
     volumes:
       - inventory-db-data:/var/lib/postgresql/data
     healthcheck:

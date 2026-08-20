@@ -21,8 +21,7 @@ export function LoginPage() {
           <p className="eyebrow">LazyManager</p>
           <h1 id="login-title">Đăng nhập vận hành</h1>
           <p>
-            Một màn hình gọn để kiểm tra phiên, gateway và các service trong
-            walking skeleton.
+            Truy cập không gian quản lý ca làm, tồn kho và giao dịch hằng ngày của cửa hàng.
           </p>
           <div className="auth-visual" aria-hidden="true">
             <img src={heroImage} alt="" />
@@ -30,11 +29,6 @@ export function LoginPage() {
         </div>
         <aside className="login-card" aria-label="Đăng nhập">
           <LoginForm onLoginSuccess={login} />
-          <div className="demo-accounts" aria-label="Tài khoản thử nghiệm">
-            <span>manager@example.com</span>
-            <span>staff@example.com</span>
-            <span>locked@example.com</span>
-          </div>
         </aside>
       </section>
     </main>

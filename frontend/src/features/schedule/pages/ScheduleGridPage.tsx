@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { PageHeader } from '../../../components/PageHeader'
 import { listEmployees, type Employee } from '../../health/api/employeesApi'
 import {
   createShiftAssignment,
@@ -119,23 +119,11 @@ export function ScheduleGridPage() {
 
   return (
     <main className="shell schedule-shell">
-      <section className="overview" aria-labelledby="schedule-title">
-        <div>
-          <p className="eyebrow">Schedule</p>
-          <h1 id="schedule-title">Lịch làm việc</h1>
-          <p className="summary">
-            Chọn ca theo từng nhân viên. Ai không có ca trong ngày sẽ nằm ở hàng OFF.
-          </p>
-        </div>
-        <div className="actions">
-          <Link className="link-button" to="/">
-            Dashboard
-          </Link>
-          <Link className="link-button" to="/employees">
-            Nhân viên
-          </Link>
-        </div>
-      </section>
+      <PageHeader
+        eyebrow="Schedule"
+        title="Lịch làm việc"
+        summary="Chọn ca theo từng nhân viên. Ai không có ca trong ngày sẽ nằm ở hàng OFF."
+      />
 
       <section className="schedule-picker" aria-label="Chọn ca cho nhân viên">
         <div className="schedule-picker-header">
