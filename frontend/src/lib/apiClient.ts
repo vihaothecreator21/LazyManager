@@ -1,4 +1,5 @@
 import { clearSession } from './tokenStorage'
+import { handleDemoRequest } from './demoApi'
 
 type RequestOptions = RequestInit & {
   skipAuthRedirect?: boolean
@@ -16,6 +17,11 @@ export async function apiClient<T>(
     hasRetriedAfterRefresh = false,
     ...fetchOptions
   } = options
+
+  const demoResponse = handleDemoRequest<T>(url, fetchOptions)
+  if (demoResponse) {
+    return demoResponse
+  }
 
   const response = await fetchWithJsonHeaders(url, fetchOptions)
 
