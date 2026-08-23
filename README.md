@@ -1,7 +1,6 @@
 # LazyManager
 
-
-
+https://lazy-manager-tau.vercel.app/
 
 ## Kiến Trúc
 
